@@ -119,7 +119,7 @@ class DecoupledWrapper(QuadEnvEIx):
         reward_eb1  = -self.Cb1*(eb1/np.pi)
         reward_eW3  = -self.CW3*(abs(W3)**2)
         reward_eIb1 = -self.CIR*abs(self.eIR.error)
-        rwd_2    = reward_eb1 + reward_eW3 + reward_eIb1
+        rwd_2 = reward_eb1 + reward_eW3 + reward_eIb1
 
         return [rwd_1, rwd_2]
 

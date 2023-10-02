@@ -55,7 +55,7 @@ class QuadEnvEIx(QuadEnv):
         seed: Optional[int] = None,
         options: Optional[dict] = None,
     ):
-        super().reset(seed=seed)
+        # super().reset(seed=seed)
         QuadEnv.reset(self, env_type)
 
         # Domain randomization:

@@ -31,8 +31,8 @@ def create_parser():
     # args of agents:
     parser.add_argument("--actor_hidden_dim", default=[16, 8], type=int, help='Number of nodes in hidden layers of actor net (default: 64)')
     parser.add_argument("--critic_hidden_dim", default=512, type=int, help='Number of nodes in hidden layers of critic net (default: 256)')
-    parser.add_argument("--lr_a", default=[1e-5, 1e-5], type=float, help="Learning rate of actor, alpha (default: 1e-5)")
-    parser.add_argument("--lr_c", default=[1e-5, 1e-5], type=float, help="Learning rate of critic, alpha (default: 1e-5)")
+    parser.add_argument("--lr_a", default=[1e-4, 1e-4], type=float, help="Learning rate of actor, alpha (default: 1e-5)")
+    parser.add_argument("--lr_c", default=[1e-4, 1e-4], type=float, help="Learning rate of critic, alpha (default: 1e-5)")
     parser.add_argument('--discount', default=0.99, type=float, metavar='G', help='discount factor, discount (default: 0.99)')
     parser.add_argument("--max_action", default=1., type=float, help="Max action")
     parser.add_argument("--use_clip_grad_norm", default=True, type=bool, help="Clips gradient norm of parameters")

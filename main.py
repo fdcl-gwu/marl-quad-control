@@ -80,7 +80,7 @@ class Learner:
         log_eval = open(log_eval_path,"w+") # Total timesteps vs. Evaluated average reward
 
         # Initialize environment:
-        obs_n, done = self.env.reset(env_type='train', seed=self.seed), False
+        obs_n, done_episode = self.env.reset(env_type='train', seed=self.seed), False
         b1d = self.env.b1d
         max_total_reward = args.max_steps*0.9 # to save best models
         episode_timesteps, episode_reward = 0, 0
@@ -103,12 +103,11 @@ class Learner:
 
             # Episode termination:
             if episode_timesteps == self.args.max_steps: # Episode terminated!
-                done = True
-                if (abs(eX) <= 0.05).all(): # Problem is solved!
-                    done_n[0] = True
-                if abs(eR) <= 0.05: # Problem is solved!
-                    done_n[1] = True
-
+                done_episode = True
+                done_n[0] = True if (abs(eX) <= 0.05).all() else False # Problem is solved!
+                if self.framework in ("DTDE", "CTDE"):
+                    done_n[1] = True if abs(eR) <= 0.05 else False # Problem is solved!
+        
             # Store a set of transitions in replay buffer:
             self.replay_buffer.store_transition(obs_n, act_n, r_n, obs_next_n, done_n)
             obs_n = obs_next_n
@@ -142,8 +141,8 @@ class Learner:
                     for agent_id in range(self.args.N):
                         self.agent_n[agent_id].save_model(self.framework, self.total_timesteps, agent_id, self.seed)
                
-            # If done:
-            if any(done_n) == True or done == True:
+            # If done_episode:
+            if any(done_n) == True or done_episode == True:
                 if self.framework in ("DTDE", "CTDE"):
                     print(f"total_timestpes: {self.total_timesteps+1}, time_stpes: {episode_timesteps}, reward: {episode_reward:.3f}, eX: {eX}, eR: {eR:.3f}")
                 elif self.framework == "SARL":
@@ -158,7 +157,7 @@ class Learner:
                     log_step.flush()
                 
                 # Reset environment:
-                obs_n, done = self.env.reset(env_type='train', seed=self.seed), False
+                obs_n, done_episode = self.env.reset(env_type='train', seed=self.seed), False
                 episode_timesteps, episode_reward = 0, 0
 
         # Close environment:
