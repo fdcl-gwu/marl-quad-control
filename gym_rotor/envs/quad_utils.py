@@ -108,9 +108,7 @@ def state_decomposition(state):
 
 # Normalization state vectors: [max, min] -> [-1, 1]
 def state_normalization(state, x_lim, v_lim, W_lim):
-    x_norm = state[0:3]/x_lim 
-    v_norm = state[3:6]/v_lim 
-    W_norm = state[15:18]/W_lim
+    x_norm, v_norm, W_norm = state[0:3]/x_lim, state[3:6]/v_lim, state[15:18]/W_lim
     R_vec = state[6:15]
     R = R_vec.reshape(3, 3, order='F')
     # Re-orthonormalize:
@@ -124,9 +122,7 @@ def state_normalization(state, x_lim, v_lim, W_lim):
 
 # De-normalization state vectors: [-1, 1] -> [max, min]
 def state_de_normalization(state, x_lim, v_lim, W_lim):
-    x = state[0:3]*x_lim # [m]
-    v = state[3:6]*v_lim # [m/s]
-    W = state[15:18]*W_lim # [rad/s]
+    x, v, W = state[0:3]*x_lim, state[3:6]*v_lim, state[15:18]*W_lim 
     R_vec = state[6:15]
     R = R_vec.reshape(3, 3, order='F')
     # Re-orthonormalize:
