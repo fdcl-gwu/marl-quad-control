@@ -26,7 +26,7 @@ def create_parser():
     # Agent2's reward:
     parser.add_argument('--Cb1',  default=2.0, type=float, metavar='G', help='Attitude coeff. (default: )')
     parser.add_argument('--CW3',  default=0.2, type=float, metavar='G', help='Angular velocity coeff. (default: )')
-    parser.add_argument('--CIR', default=0.06, type=float, metavar='G', help='Attitude integral coeff. (default: )')
+    parser.add_argument('--CIb1', default=0.06, type=float, metavar='G', help='Attitude integral coeff. (default: )')
 
     # args of agents:
     parser.add_argument("--actor_hidden_dim", default=[16, 8], type=int, help='Number of nodes in hidden layers of actor net (default: 64)')

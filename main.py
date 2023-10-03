@@ -237,7 +237,7 @@ class Learner:
                     elif self.framework == "SARL":
                         eR = ang_btw_two_vectors(obs_next_n[0][6:9], b1d) # heading error [rad]
                         print(f"eval_iter: {num_eval+1}, time_stpes: {episode_timesteps}, episode_reward: {episode_reward[0]:.3f}, eX: {eX}, eR: {eR:.3f}")
-                    success = True if (abs(eX) <= 0.05).all() else False
+                    success = True if (abs(eX) <= 0.05).all() and abs(eR) <= 0.05 else False
                     success_count.append(success)
                     break
 

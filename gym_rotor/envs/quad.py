@@ -434,7 +434,7 @@ class QuadEnv(gym.Env):
         self.avrg_act = (self.min_force+self.max_force)/2.0 
         self.scale_act = self.max_force-self.avrg_act # actor scaling
 
-        print('m:',f'{self.m:.3f}','d:',f'{self.d:.3f}','J:',f'{J1:.4f}',f'{J3:.4f}','c_tf:',f'{self.c_tf:.4f}','c_tw:',f'{self.c_tw:.3f}')
+        # print('m:',f'{self.m:.3f}','d:',f'{self.d:.3f}','J:',f'{J1:.4f}',f'{J3:.4f}','c_tf:',f'{self.c_tf:.4f}','c_tw:',f'{self.c_tw:.3f}')
         
 
     def render(self, mode='human', close=False):
