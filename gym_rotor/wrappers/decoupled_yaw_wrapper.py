@@ -6,9 +6,8 @@ from numpy.random import uniform
 from scipy.integrate import odeint, solve_ivp
 
 from gym_rotor.envs.quad import QuadEnv
-from gym_rotor.envs.quad_eIx import QuadEnvEIx
 from gym_rotor.envs.quad_utils import *
-from gym_rotor.envs.quad_eIx_utils import *
+from gym_rotor.wrappers.decoupled_yaw_utils import *
 from typing import Optional
 import args_parse
 
@@ -146,9 +145,9 @@ class DecoupledWrapper(QuadEnv):
 
         # Agent2's reward:
         reward_eb1  = -self.Cb1*(self.eb1/np.pi)
-        reward_eW3  = -self.CW3*(abs(W3)**2)
         reward_eIb1 = -self.CIb1*abs(eIb1)
-        rwd_2 = reward_eb1 + reward_eW3 + reward_eIb1
+        reward_eW3  = -self.CW3*(abs(W3)**2)
+        rwd_2 = reward_eb1 + reward_eIb1 + reward_eW3 
 
         return [rwd_1, rwd_2]
 

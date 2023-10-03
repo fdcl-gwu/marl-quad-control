@@ -6,7 +6,6 @@ import args_parse
 
 import numpy as np
 from gym_rotor.envs.quad_utils import *
-from gym_rotor.envs.quad_eIx_utils import *
 from gym_rotor.wrappers.decoupled_yaw_wrapper import DecoupledWrapper
 from algos.replay_buffer import ReplayBuffer
 from algos.matd3 import MATD3
