@@ -5,6 +5,7 @@ from datetime import datetime
 import args_parse
 
 import numpy as np
+from numpy import random
 from gym_rotor.envs.quad_utils import *
 from gym_rotor.wrappers.decoupled_yaw_wrapper import DecoupledWrapper
 from algos.replay_buffer import ReplayBuffer
@@ -89,7 +90,10 @@ class Learner:
             episode_timesteps += 1
 
             # Each agent selects actions based on its own local observations w/ exploration noise:
-            act_n = [agent.choose_action(obs, explor_noise_std=self.explor_noise_std) for agent, obs in zip(self.agent_n, obs_n)]
+            if self.total_timesteps < self.args.start_timesteps: # select action randomly
+                act_n = [random.rand(action_dim_n)*2-1 for action_dim_n in self.args.action_dim_n] # between -1 and 1
+            else:
+                act_n = [agent.choose_action(obs, explor_noise_std=self.explor_noise_std) for agent, obs in zip(self.agent_n, obs_n)]
             action = np.concatenate((act_n), axis=None)
 
             # Perform actions:
