@@ -6,7 +6,7 @@ def create_parser():
     parser.add_argument("--save_model", default=True, action="store_true", help='Save models and optimizer parameters (default: True)')
     parser.add_argument("--save_log", default=False, type=bool, help='Load trained models and save log(default: False)')      
     parser.add_argument("--test_model", default=False, type=bool, help='Load and test trained models (default: False)')   
-    parser.add_argument("--eval_freq", default=1e4, type=int, help='How often (time steps) evaluate our trained model')       
+    parser.add_argument("--eval_freq", default=1e4, type=int, help='How often (time steps) evaluate our trained model (default: 1e4)')       
     parser.add_argument("--num_eval", type=float, default=4, help="Number of episodes to evaluate our trained model")
     parser.add_argument('--seed', default=1992, type=int, metavar='N', help='Random seed of Gym, PyTorch and Numpy (default: 1234)') 
 
@@ -17,15 +17,15 @@ def create_parser():
     parser.add_argument('--render', default=False, type=bool, help='Simulation visualization (default: False)')
     # coefficients in reward function:
     # Agent1's reward:
-    parser.add_argument('--Cx',  default=7.0, type=float, metavar='G', help='Position coeff. (default: )')
+    parser.add_argument('--Cx', default=7.0, type=float, metavar='G', help='Position coeff. (default: )')
     parser.add_argument('--CIx', default=0.04, type=float, metavar='G', help='Position integral coeff. (default: )')
-    parser.add_argument('--Cv',  default=0.25, type=float, metavar='G', help='Velocity coeff. (default: )')
-    parser.add_argument('--Cb3',  default=3.5, type=float, metavar='G', help='Attitude coeff. (default: )')
-    parser.add_argument('--Cw12',  default=0.25, type=float, metavar='G', help='Angular velocity coeff. (default: )')
+    parser.add_argument('--Cv', default=0.25, type=float, metavar='G', help='Velocity coeff. (default: )')
+    parser.add_argument('--Cb3', default=3.5, type=float, metavar='G', help='Attitude coeff. (default: )')
+    parser.add_argument('--Cw12', default=0.25, type=float, metavar='G', help='Angular velocity coeff. (default: )')
     parser.add_argument('--alpha', default=0.01, type=float, metavar='G', help='Position integral coeff. (default: )')
     # Agent2's reward:
-    parser.add_argument('--Cb1',  default=2.0, type=float, metavar='G', help='Attitude coeff. (default: )')
-    parser.add_argument('--CW3',  default=0.2, type=float, metavar='G', help='Angular velocity coeff. (default: )')
+    parser.add_argument('--Cb1', default=2.0, type=float, metavar='G', help='Attitude coeff. (default: )')
+    parser.add_argument('--CW3', default=0.2, type=float, metavar='G', help='Angular velocity coeff. (default: )')
     parser.add_argument('--CIb1', default=0.06, type=float, metavar='G', help='Attitude integral coeff. (default: )')
 
     # args of agents:
