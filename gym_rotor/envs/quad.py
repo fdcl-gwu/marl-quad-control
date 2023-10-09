@@ -154,19 +154,20 @@ class QuadEnv(gym.Env):
 
         # Reward function:
         reward = self.reward_wrapper(obs)
+        if self.framework_id in ("DTDE", "CTDE"):
+            reward[0] = interp(reward[0], [self.reward_min_1, 0.], [0., 1.]) # linear interpolation [0,1]
+            reward[1] = interp(reward[1], [self.reward_min_2, 0.], [0., 1.]) # linear interpolation [0,1]
+        elif self.framework_id == "SARL":
+            reward[0] = interp(reward, [self.reward_min, 0.], [0., 1.]) # linear interpolation [0,1]  
 
         # Terminal condition:
         done = self.done_wrapper(obs)
         if done[0]: # Out of boundry or crashed!
             reward[0] = self.reward_crash
-        if self.framework_id in ("DTDE", "CTDE"):
-            reward[0] = interp(reward[0], [self.reward_min_1, 0.], [0., 1.]) # linear interpolation [0,1]
-            if done[1]: # Out of boundry or crashed!
-                reward[1] = self.reward_crash
-            reward[1] = interp(reward[1], [self.reward_min_2, 0.], [0., 1.]) # linear interpolation [0,1]
-        elif self.framework_id == "SARL":
-            reward[0] = interp(reward, [self.reward_min, 0.], [0., 1.]) # linear interpolation [0,1]  
+        if done[1]: # Out of boundry or crashed!
+            reward[1] = self.reward_crash
 
+        print(reward)
         # return obs, reward, done, False, {}
         return obs, reward, done, self.state, {}
 
