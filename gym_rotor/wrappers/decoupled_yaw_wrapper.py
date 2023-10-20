@@ -26,8 +26,7 @@ class DecoupledWrapper(QuadEnv):
         self.b3d = np.array([0.,0.,1])
 
         # limits of states:
-        self.eIx_lim = 10.0 
-        self.eIb1_lim = 10.0 
+        self.eIx_lim = self.eIb1_lim = 10.
 
 
     def reset(self, env_type='train',
@@ -109,14 +108,14 @@ class DecoupledWrapper(QuadEnv):
         x, v, b3, _, _ = decoupled_obs1_decomposition(self.state, self.eIx) # Agent1's obs
         self.ex = x - self.xd     # position error
         self.ev = v - self.xd_dot # velocity error
-        self.eIX.integrate(-self.alpha*self.eIX.error*self.eIx_lim + x_norm*self.x_lim, self.dt) 
-        self.eIx = clip(self.eIX.error, -self.sat_sigma, self.sat_sigma)/self.eIx_lim
+        self.eIX.integrate(-self.alpha*self.eIX.error + x_norm*self.x_lim, self.dt) 
+        self.eIx = clip(self.eIX.error/self.eIx_lim, -self.sat_sigma, self.sat_sigma)
 
         b1, _, _ = decoupled_obs2_decomposition(self.state, self.eIb1) # Agent2's obs
         b1c = -(hat(b3) @ hat(b3)) @ self.b1d # desired b1 
         self.eb1 = 1 - b1@b1c # b1 error
         self.eIR.integrate(self.eb1, self.dt) # b1 integral error
-        self.eIb1 = clip(self.eIR.error, -self.sat_sigma, self.sat_sigma)/self.eIb1_lim
+        self.eIb1 = clip(self.eIR.error/self.eIb1_lim, -self.sat_sigma, self.sat_sigma)
 
         # Agent1's obs:
         obs_1 = np.concatenate((decoupled_obs1_decomposition(self.state, self.eIx)), axis=None)
@@ -165,7 +164,7 @@ class DecoupledWrapper(QuadEnv):
             or (abs(v) >= 1.0).any() # [m/s]
             or (abs(W[0]) >= 1.0) # [rad/s]
             or (abs(W[1]) >= 1.0) # [rad/s]
-            or (abs(eIx) >= 1.0).any()
+            #or (abs(eIx) >= 1.0).any()
         )
 
         # Agent2's obs

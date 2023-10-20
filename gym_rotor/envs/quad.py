@@ -93,7 +93,7 @@ class QuadEnv(gym.Env):
 
         # Integral terms:
         self.use_integral = True
-        self.sat_sigma = 3.
+        self.sat_sigma = 1.
         self.eIX = IntegralErrorVec3() # Position integral error
         self.eIR = IntegralError() # Attitude integral error
         self.eIX.set_zero() # Set all integrals to zero
@@ -105,7 +105,7 @@ class QuadEnv(gym.Env):
         self.b1d    = np.array([1.,0.,0.]) # desired heading direction        
         self.Rd     = np.eye(3)
 
-        # limits of states:
+        # Limits of states:
         self.x_lim = 3.0 # [m]
         self.v_lim = 5.0 # [m/s]
         self.W_lim = 2*pi # [rad/s]
@@ -167,7 +167,6 @@ class QuadEnv(gym.Env):
         if done[1]: # Out of boundry or crashed!
             reward[1] = self.reward_crash
 
-        print(reward)
         # return obs, reward, done, False, {}
         return obs, reward, done, self.state, {}
 

@@ -262,7 +262,7 @@ class Learner:
                     # for agent_id in range(self.args.N):
                     #      success_count[agent_id] = True if (abs(eX) <= 0.05).all() and abs(eR) <= 0.05 else False
                     success[0] = True if (abs(eX) <= 0.05).all() else False
-                    success[1] = True if abs(eR) <= 0.05 else False
+                    success[1] = True if abs(eR) <= 0.02 else False
                     success_count.append(success)
                     #success = True if (abs(eX) <= 0.05).all() and abs(eR) <= 0.05 else False
                     #success_count.append(success)
