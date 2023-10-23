@@ -42,7 +42,8 @@ class Learner:
             self.args.N = 1 # The number of agents
             self.args.obs_dim_n = [21, 21]
             self.args.action_dim_n = [4, 4] 
-        
+        self.eval_max_steps = self.args.eval_max_steps/self.env.dt 
+
         # Set seed for random number generators:
         self.seed = seed
         np.random.seed(self.seed)
@@ -64,10 +65,10 @@ class Learner:
         # Load trained models and optimizer parameters:
         if args.test_model == True:
             agent_id = 0
-            self.agent_n[agent_id].load(self.framework, 2890_000, agent_id, self.seed) 
+            self.agent_n[agent_id].load(self.framework, 1980_000, agent_id, self.seed) 
             # self.agent_n[agent_id].load_solved_model(self.framework, 2250_000, agent_id, self.seed) 
             agent_id = 1
-            self.agent_n[agent_id].load(self.framework, 2890_000, agent_id, self.seed) 
+            self.agent_n[agent_id].load(self.framework, 1980_000, agent_id, self.seed) 
             # self.agent_n[agent_id].load_solved_model(self.framework, 2250_000, agent_id, self.seed) 
             '''
             for agent_id in range(self.args.N):
@@ -89,7 +90,7 @@ class Learner:
         # Initialize environment:
         obs_n, done_episode = self.env.reset(env_type='train', seed=self.seed), False
         b1d = self.env.b1d
-        max_total_reward = [0.9*args.max_steps,0.9*args.max_steps] # 90% of max_steps to save best models
+        max_total_reward = [0.9*self.eval_max_steps,0.9*self.eval_max_steps] # 90% of max_steps to save best models
         episode_timesteps, episode_reward = 0, [0.,0.]
 
         # Training loop:
@@ -230,7 +231,7 @@ class Learner:
             act_list, obs_list, cmd_list = [], [], [] if args.save_log else None
 
             # Evaluation loop:
-            for _ in range(self.args.max_steps):
+            for _ in range(int(self.eval_max_steps)):
                 episode_timesteps += 1
                 # Actions w/o exploration noise:
                 act_n = [agent.choose_action(obs, explor_noise_std=0) for agent, obs in zip(self.agent_n, obs_n)] 
@@ -251,7 +252,7 @@ class Learner:
                     cmd_list.append(np.concatenate((xd, xd_dot, b1d, b3d, Wd), axis=None))
 
                 # Episode termination:
-                if any(done_n) or episode_timesteps == args.max_steps:
+                if any(done_n) or episode_timesteps == self.eval_max_steps:
                     eX = np.round(obs_next_n[0][0:3]*eval_env.x_lim, 5) # position error [m]
                     if self.framework in ("DTDE", "CTDE"):
                         eR = ang_btw_two_vectors(obs_next_n[1][0:3], b1d) # heading error [rad]
@@ -291,7 +292,7 @@ class Learner:
         print("------------------------------------------------------------------------------------------")
 
         # Save solved model:
-        for agent_id in range(self.args.N):
+        for agent_id in range(self.args.N): 
             if all(i[agent_id] == True for i in success_count) and args.save_model == True: # Problem is solved
                 self.agent_n[agent_id].save_solved_model(self.framework, self.total_timesteps, agent_id, self.seed)
         '''

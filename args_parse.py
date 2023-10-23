@@ -6,14 +6,15 @@ def create_parser():
     parser.add_argument("--save_model", default=True, action="store_true", help='Save models and optimizer parameters (default: True)')
     parser.add_argument("--save_log", default=False, type=bool, help='Load trained models and save log(default: False)')      
     parser.add_argument("--test_model", default=False, type=bool, help='Load and test trained models (default: False)')   
-    parser.add_argument("--eval_freq", default=1e4, type=int, help='How often (time steps) evaluate our trained model (default: 1e4)')       
-    parser.add_argument("--num_eval", type=float, default=4, help="Number of episodes to evaluate our trained model")
     parser.add_argument('--seed', default=1992, type=int, metavar='N', help='Random seed of Gym, PyTorch and Numpy (default: 1234)') 
 
     # args of environment:
     parser.add_argument('--framework_id', default="CTDE", help='Name of framework: SARL, DTDE, or CTDE ')
     parser.add_argument('--max_steps', default=5000, type=int, help='Maximum number of steps in each episode (default: 2000)')
     parser.add_argument('--max_timesteps', default=int(5e6), type=int, help='Number of total timesteps (default: 7e6)')
+    parser.add_argument("--num_eval", type=float, default=10, help="Number of episodes to evaluate our trained model")
+    parser.add_argument("--eval_freq", default=1e4, type=int, help='How often (time steps) evaluate our trained model (default: 1e4)')       
+    parser.add_argument('--eval_max_steps', default=3, type=int, help='[sec] Maximum number of steps in each episode for evaluation')
     parser.add_argument('--render', default=False, type=bool, help='Simulation visualization (default: False)')
     # coefficients in reward function:
     # Agent1's reward:

@@ -381,7 +381,7 @@ class QuadEnv(gym.Env):
             self.init_R = 50 * self.D2R  # ±50 deg 
             self.init_W = self.W_lim*0.5 # 50%; initial ang vel error, [rad/s]
         elif env_type == 'eval':
-            self.init_x = 1.0 # initial pos error,[m]
+            self.init_x = 0.3 # initial pos error,[m]
             self.init_v = self.v_lim*0.1 # 10%; initial vel error, [m/s]
             self.init_R = 10 * self.D2R  # ±10 deg 
             self.init_W = self.W_lim*0.1 # 10%; initial ang vel error, [rad/s]
@@ -669,7 +669,7 @@ class QuadEnv(gym.Env):
         self.render_index += 1        
         """
 
-        rate(30) # FPS
+        rate(100) # FPS
 
         return True
 
