@@ -1,11 +1,10 @@
 ## Importing Libraries
 import os
 import gymnasium as gym
+from gym_rotor.wrappers.decoupled_yaw_wrapper import DecoupledWrapper
 import gym_rotor
 import args_parse
 import numpy as np
-from numpy import clip 
-from datetime import datetime
 import matplotlib.pyplot as plt
 # https://www.geeksforgeeks.org/style-plots-using-matplotlib/
 # https://www.dunderdata.com/blog/view-all-available-matplotlib-styles
@@ -16,21 +15,24 @@ plt.rcParams['font.size'] = 18
 fontsize = 25
 
 # Data load and indexing:
-file_name = 'log_10092023_124338'
+file_name = 'log_10272023_145913'
 log_date = np.loadtxt(os.path.join('./results', file_name + '.dat')) 
 start_index = 3
 end_index = len(log_date)
-is_SAVE = True
+is_SAVE = False
 
 # Pre-processing:
 parser = args_parse.create_parser()
 args = parser.parse_args()
-env = gym.make('Quad-v0')
+if args.framework_id in ("DTDE", "CTDE"):
+	env = DecoupledWrapper()
+elif args.framework_id == "SARL":
+    env = gym.make('Quad-v0')
 t = np.arange(end_index - start_index)*env.dt # time [sec]
 
 load_act  = log_date[:, 0:5] # automatically discards the headers
-load_obs  = log_date[:, 5:23] 
-load_cmd  = log_date[:, 23:] 
+load_obs  = log_date[:, 5:23+3] 
+load_cmd  = log_date[:, 23+3:] 
 act = load_act[start_index-2: end_index-2]
 obs = load_obs[start_index-2: end_index-2]
 cmd = load_cmd[start_index-2: end_index-2]
@@ -42,6 +44,7 @@ R11, R21, R31 = obs[:, 6],  obs[:, 7],  obs[:, 8]
 R12, R22, R32 = obs[:, 9],  obs[:, 10], obs[:, 11]
 R13, R23, R33 = obs[:, 12], obs[:, 13], obs[:, 14]  
 W1, W2, W3 = obs[:, 15]*env.W_lim, obs[:, 16]*env.W_lim, obs[:, 17]*env.W_lim
+eIx1, eIx2, eIx3 = obs[:, 18]*env.eIx_lim, obs[:, 19]*env.eIx_lim, obs[:, 20]*env.eIx_lim
 
 # Actions
 if args.framework_id in ("DTDE", "CTDE"):
@@ -329,7 +332,7 @@ for i in range(t.size):
     RdtR = Rd_T@R
     eR[i] = 0.5*vee(RdtR - RdtR.T) # attitude error vector
 
-
+"""
 class IntegralErrorVec3:
     def __init__(self,):
         self.error = np.zeros(3)
@@ -349,10 +352,10 @@ eIX.set_zero() # Set all integrals to zero
 eIX_vec = np.zeros((t.size, 3))
 for i in range(t.size):
     eX = np.array([(x1 - xd1)[i], (x2 - xd2)[i], (x3 - xd3)[i]])
-    eIX.integrate(eX, env.dt)
+    eIX.integrate(-env.alpha*eIX.error + eX, env.dt)
     eIX.error = clip(eIX.error, -sat_sigma, sat_sigma)
-    # eIX.error = eIX.error
     eIX_vec[i] = eIX.error
+"""
 
 fig, axs = plt.subplots(3, 3, figsize=(30, 12))
 axs[0, 0].plot(t, x1 - xd1, linewidth=3, label='$e_{x_1}$')
@@ -364,13 +367,16 @@ axs[0, 1].set_ylabel('$e_{x_2}$ [m]', size=fontsize)
 axs[0, 2].plot(t, x3 - xd3, linewidth=3, label='$e_{x_3}$')
 axs[0, 2].set_ylabel('$e_{x_3}$ [m]', size=fontsize)
 
-axs[1, 0].plot(t, eIX_vec[:, 0], linewidth=3, label='$eI_{x_1}$')
+axs[1, 0].plot(t, eIx1, linewidth=3, label='$eI_{x_1}$')
+#axs[1, 0].plot(t, eIX_vec[:, 0], linewidth=3, label='$eI_{x_1}$')
 axs[1, 0].set_ylabel('$eI_{x_1}$', size=fontsize)
 
-axs[1, 1].plot(t, eIX_vec[:, 1], linewidth=3, label='$eI_{x_2}$')
+axs[1, 1].plot(t, eIx2, linewidth=3, label='$eI_{x_2}$')
+#axs[1, 1].plot(t, eIX_vec[:, 1], linewidth=3, label='$eI_{x_2}$')
 axs[1, 1].set_ylabel('$eI_{x_2}$', size=fontsize)
 
-axs[1, 2].plot(t, eIX_vec[:, 2], linewidth=3, label='$eI_{x_3}$')
+axs[1, 2].plot(t, eIx3, linewidth=3, label='$eI_{x_3}$')
+#axs[1, 2].plot(t, eIX_vec[:, 2], linewidth=3, label='$eI_{x_3}$')
 axs[1, 2].set_ylabel('$eI_{x_3}$', size=fontsize)
 
 axs[2, 0].plot(t, eR[:, 0], linewidth=3, label='$e_{R_1}$')
