@@ -19,7 +19,7 @@ file_name = 'log_10272023_145913'
 log_date = np.loadtxt(os.path.join('./results', file_name + '.dat')) 
 start_index = 3
 end_index = len(log_date)
-is_SAVE = False
+is_SAVE = True
 
 # Pre-processing:
 parser = args_parse.create_parser()

@@ -65,11 +65,11 @@ class Learner:
         # Load trained models and optimizer parameters:
         if args.test_model == True:
             agent_id = 0
-            self.agent_n[agent_id].load(self.framework, 1980_000, agent_id, self.seed) 
-            # self.agent_n[agent_id].load_solved_model(self.framework, 2250_000, agent_id, self.seed) 
+            # self.agent_n[agent_id].load(self.framework, 1980_000, agent_id, self.seed) 
+            self.agent_n[agent_id].load_solved_model(self.framework, 2250_000, agent_id, self.seed) 
             agent_id = 1
-            self.agent_n[agent_id].load(self.framework, 1980_000, agent_id, self.seed) 
-            # self.agent_n[agent_id].load_solved_model(self.framework, 2250_000, agent_id, self.seed) 
+            # self.agent_n[agent_id].load(self.framework, 1980_000, agent_id, self.seed) 
+            self.agent_n[agent_id].load_solved_model(self.framework, 2250_000, agent_id, self.seed) 
             '''
             for agent_id in range(self.args.N):
                 self.agent_n[agent_id].load(self.framework, 2890_000, agent_id, self.seed) 
@@ -248,7 +248,7 @@ class Learner:
                 # Save data:
                 if args.save_log:
                     act_list.append(action)
-                    obs_list.append(state_next)
+                    obs_list.append(np.concatenate((state_next, obs_next_n[0][12:]), axis=None))
                     cmd_list.append(np.concatenate((xd, xd_dot, b1d, b3d, Wd), axis=None))
 
                 # Episode termination:

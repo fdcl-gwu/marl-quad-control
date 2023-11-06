@@ -24,7 +24,7 @@ class QuadEnv(gym.Env):
         args = parser.parse_args()
 
         # Quadrotor parameters:
-        self.m = 1.994 # mass of quad, [kg]
+        self.m = 2.15 # mass of quad, [kg]
         self.d = 0.23 # arm length, [m]
         self.J = np.diag([0.022, 0.022, 0.035]) # inertia matrix of quad, [kg m2]
         self.c_tf = 0.0135 # torque-to-thrust coefficients
@@ -381,15 +381,15 @@ class QuadEnv(gym.Env):
             self.init_R = 50 * self.D2R  # ±50 deg 
             self.init_W = self.W_lim*0.5 # 50%; initial ang vel error, [rad/s]
         elif env_type == 'eval':
-            self.init_x = 0.3 # initial pos error,[m]
-            self.init_v = self.v_lim*0.1 # 10%; initial vel error, [m/s]
-            self.init_R = 10 * self.D2R  # ±10 deg 
-            self.init_W = self.W_lim*0.1 # 10%; initial ang vel error, [rad/s]
+            self.init_x = 0.4 # initial pos error,[m]
+            self.init_v = self.v_lim*0.01 # 1%; initial vel error, [m/s]
+            self.init_R = 2 * self.D2R  # ±10 deg 
+            self.init_W = self.W_lim*0.01 # 1%; initial ang vel error, [rad/s]
 
 
     def set_random_parameters(self, env_type='train'):
         # Nominal quadrotor parameters:
-        self.m = 1.994 # mass of quad, [kg]
+        self.m = 2.15 # mass of quad, [kg]
         self.d = 0.23 # arm length, [m]
         J1, J2, J3 = 0.022, 0.022, 0.035
         self.J = np.diag([J1, J2, J3]) # inertia matrix of quad, [kg m2]
