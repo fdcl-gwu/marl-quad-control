@@ -8,6 +8,32 @@ from numpy.linalg import det
 from numpy.linalg import norm
 from math import cos, sin, atan2, sqrt, acos, degrees
 
+# Decomposing state vectors
+def state_decomposition(state):
+    x, v, R_vec, W = state[0:3], state[3:6], state[6:15], state[15:18]
+    R = ensure_SO3(R_vec.reshape(3, 3, order='F')) # re-orthonormalization if needed
+
+    return x, v, R, W
+
+
+# Normalization state vectors: [max, min] -> [-1, 1]
+def state_normalization(state, x_lim, v_lim, W_lim):
+    x_norm, v_norm, W_norm = state[0:3]/x_lim, state[3:6]/v_lim, state[15:18]/W_lim
+    R_vec = state[6:15]
+    R = ensure_SO3(R_vec.reshape(3, 3, order='F')) # re-orthonormalization if needed
+    R_vec = R.reshape(9, 1, order='F').flatten()
+
+    return x_norm, v_norm, R_vec, W_norm
+
+
+# De-normalization state vectors: [-1, 1] -> [max, min]
+def state_de_normalization(state, x_lim, v_lim, W_lim):
+    x, v, W = state[0:3]*x_lim, state[3:6]*v_lim, state[15:18]*W_lim 
+    R_vec = state[6:15]
+    R = ensure_SO3(R_vec.reshape(3, 3, order='F')) # re-orthonormalization if needed
+
+    return x, v, R, W
+
 
 class IntegralErrorVec3:
     def __init__(self):
@@ -93,46 +119,28 @@ def get_current_Rd(R):
 
     return R_proj
 
-# Decomposing state vectors
-def state_decomposition(state):
-    x, v, R_vec, W = state[0:3], state[3:6], state[6:15], state[15:18]
-    R = R_vec.reshape(3, 3, order='F')
-    # Re-orthonormalize:
-    if not isRotationMatrix(R):
+
+def ensure_SO3(R, tolerance=1e-6):
+    """ Make sure the given input array is in SO(3).
+
+    Args:
+        x: (3x3 numpy array) matrix
+        tolerance: Tolerance level for considering the magnitude as 1
+
+    Returns:
+        True if the input array is in SO(3). Raises an exception otherwise.
+    """
+    # Calculate the magnitude (norm) of the matrix
+    magnitude = np.linalg.det(R)
+
+    # R matrix should satisfy R^T@R = I and det(R) = 1:
+    if np.allclose(R.T@R,np.eye(3),rtol=tolerance) and np.isclose(magnitude,1.,rtol=tolerance):
+        return R
+    else: 
         U, s, VT = psvd(R)
-        R = U @ VT.T
-        R_vec = R.reshape(9, 1, order='F').flatten()
-
-    return x, v, R, W
-
-
-# Normalization state vectors: [max, min] -> [-1, 1]
-def state_normalization(state, x_lim, v_lim, W_lim):
-    x_norm, v_norm, W_norm = state[0:3]/x_lim, state[3:6]/v_lim, state[15:18]/W_lim
-    R_vec = state[6:15]
-    R = R_vec.reshape(3, 3, order='F')
-    # Re-orthonormalize:
-    if not isRotationMatrix(R):
-        U, s, VT = psvd(R)
-        R = U @ VT.T
-        R_vec = R.reshape(9, 1, order='F').flatten()
-
-    return x_norm, v_norm, R, W_norm
-
-
-# De-normalization state vectors: [-1, 1] -> [max, min]
-def state_de_normalization(state, x_lim, v_lim, W_lim):
-    x, v, W = state[0:3]*x_lim, state[3:6]*v_lim, state[15:18]*W_lim 
-    R_vec = state[6:15]
-    R = R_vec.reshape(3, 3, order='F')
-    # Re-orthonormalize:
-    if not isRotationMatrix(R):
-        U, s, VT = psvd(R)
-        R = U @ VT.T
-        R_vec = R.reshape(9, 1, order='F').flatten()
-
-    return x, v, R, W
-
+        R = U @ VT.T # Re-orthonormalized R
+        return R
+    
 
 def ang_btw_two_vectors(vec1, vec2):
     unit_vector_1 = vec1 / norm(vec1)

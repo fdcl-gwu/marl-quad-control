@@ -100,8 +100,7 @@ class DecoupledWrapper(QuadEnv):
         self.state = sol.y[:,-1]
 
         # Normalization: [max, min] -> [-1, 1]
-        x_norm, v_norm, R, W_norm = state_normalization(self.state, self.x_lim, self.v_lim, self.W_lim)
-        R_vec = R.reshape(9, 1, order='F').flatten()
+        x_norm, v_norm, R_vec, W_norm = state_normalization(self.state, self.x_lim, self.v_lim, self.W_lim)
         self.state = np.concatenate((x_norm, v_norm, R_vec, W_norm), axis=0)
 
         # Update integral terms:

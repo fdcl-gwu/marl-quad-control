@@ -19,6 +19,7 @@ else:
 class TD3(object):
     def __init__(self, args, agent_id):
         
+        self.framework = args.framework_id
         self.N = args.N
         self.agent_id = agent_id
         self.max_action = args.max_action
@@ -132,15 +133,21 @@ class TD3(object):
 
             lam_M = self.lam_M # Magnitude Smoothness
             batch_size = batch_act.shape[0]
-            if self.agent_id == 0:
-                f_total_hover = np.interp(4.*env.hover_force, 
-                                         [4.*env.min_force, 4.*env.max_force], 
-                                         [-self.max_action, self.max_action]
-                                         ) * torch.ones(batch_size, 1) # normalized into [-1, 1]
-                tau_hover = torch.zeros(batch_size, 3)
-                nominal_action = torch.cat([f_total_hover, tau_hover], 1).to(device)
-            elif self.agent_id == 1:
-                nominal_action = torch.zeros(batch_size, 1).to(device) # M3_hover
+            if self.framework == "SARL":
+                nominal_action = np.interp(env.hover_force, 
+                                          [env.min_force, env.max_force], 
+                                          [-self.max_action, self.max_action]
+                                 ) * torch.ones(batch_size, self.action_dim).to(device) # normalized into [-1, 1]
+            elif self.framework == "DTDE":
+                if self.agent_id == 0:
+                    f_total_hover = np.interp(4.*env.hover_force, 
+                                            [4.*env.min_force, 4.*env.max_force], 
+                                            [-self.max_action, self.max_action]
+                                    ) * torch.ones(batch_size, 1) # normalized into [-1, 1]
+                    tau_hover = torch.zeros(batch_size, 3)
+                    nominal_action = torch.cat([f_total_hover, tau_hover], 1).to(device)
+                elif self.agent_id == 1:
+                    nominal_action = torch.zeros(batch_size, 1).to(device) # M3_hover
             Loss_M = F.mse_loss(batch_act, nominal_action)
             actor_loss += lam_M * Loss_M
 

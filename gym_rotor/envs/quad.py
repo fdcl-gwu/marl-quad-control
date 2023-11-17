@@ -86,10 +86,11 @@ class QuadEnv(gym.Env):
             self.Cx  = args.Cx
             self.CIx = args.CIx
             self.Cv  = args.Cv
-            self.CR  = args.Cb1
+            self.Cb1  = args.Cb1
             self.CIb1 = args.CIb1
+            self.Cb3  = args.Cb3
             self.CW = args.Cw12
-            self.reward_min = -np.ceil(self.Cx+self.CIx+self.Cv+self.CR+self.CIb1+self.CW)
+            self.reward_min = -np.ceil(self.Cx+self.CIx+self.Cv+self.Cb1+self.CIb1+self.Cb3+self.CW)
 
         # Integral terms:
         self.use_integral = True
@@ -158,16 +159,17 @@ class QuadEnv(gym.Env):
             reward[0] = interp(reward[0], [self.reward_min_1, 0.], [0., 1.]) # linear interpolation [0,1]
             reward[1] = interp(reward[1], [self.reward_min_2, 0.], [0., 1.]) # linear interpolation [0,1]
         elif self.framework_id == "SARL":
-            reward[0] = interp(reward, [self.reward_min, 0.], [0., 1.]) # linear interpolation [0,1]  
+            reward[0] = interp(reward[0], [self.reward_min, 0.], [0., 1.]) # linear interpolation [0,1]  
 
         # Terminal condition:
         done = self.done_wrapper(obs)
         if done[0]: # Out of boundry or crashed!
             reward[0] = self.reward_crash
-        if done[1]: # Out of boundry or crashed!
-            reward[1] = self.reward_crash
+        if self.framework_id in ("DTDE", "CTDE"):
+            if done[1]: # Out of boundry or crashed!
+                reward[1] = self.reward_crash
 
-        # return obs, reward, done, False, {}
+        #return obs, reward, done, False, {}
         return obs, reward, done, self.state, {}
 
 
@@ -270,8 +272,7 @@ class QuadEnv(gym.Env):
             self.state = sol.y[:,-1]
 
         # Normalization: [max, min] -> [-1, 1]
-        x_norm, v_norm, R, W_norm = state_normalization(self.state, self.x_lim, self.v_lim, self.W_lim)
-        R_vec = R.reshape(9, 1, order='F').flatten()
+        x_norm, v_norm, R_vec, W_norm = state_normalization(self.state, self.x_lim, self.v_lim, self.W_lim)
         self.state = np.concatenate((x_norm, v_norm, R_vec, W_norm), axis=0)
 
         return self.state
@@ -283,17 +284,15 @@ class QuadEnv(gym.Env):
 
         # Reward function coefficients:
         Cx = self.Cx # pos coef.
-        CR = self.CR # att coef.
+        Cb1 = self.Cb1 # heading coef.
         Cv = self.Cv # vel coef.
         CW = self.CW # ang_vel coef.
-        CIx = self.CIx 
-        CIb1 = self.CIb1 
 
         # Errors:
         eX = x - self.xd     # position error
         eV = v - self.xd_dot # velocity error
         # Heading errors:
-        eR = ang_btw_two_vectors(get_current_b1(R), self.b1d) # [rad]
+        eb1 = ang_btw_two_vectors(get_current_b1(R), self.b1d) # [rad]
         # Attitude errors:
         '''
         RdT_R = self.Rd.T @ R
@@ -302,35 +301,13 @@ class QuadEnv(gym.Env):
         eR = 0.5 * vee(RdT_R - RdT_R.T).flatten()
         '''
 
-		#---- Calculate integral terms to steady-state errors ----#
-        # Position integral terms:
-        if self.use_integral:
-            self.eIX.integrate(eX, self.dt) # eX + eV
-            self.eIX.error = clip(self.eIX.error, -self.sat_sigma, self.sat_sigma)
-        else:
-            self.eIX.set_zero()
-        # Attitude integral terms:
-        '''
-        if self.use_integral:
-            self.eIR.integrate(eR, self.dt) # eR + eW
-            self.eIR.error = clip(self.eIR.error, -self.sat_sigma, self.sat_sigma)
-        else:
-            self.eIR.set_zero()
-        '''
-
         # Reward function:
         reward_eX = -Cx*(norm(eX, 2)**2) 
-        # reward_eX = -Cx*(abs(eX)[0]**2 + abs(eX)[1]**2 + 1.5*(abs(eX)[2]**2)) # 0.7
-        reward_eIX = -CIx*(norm(self.eIX.error, 2)**2)
-        # reward_eIX = -CIx*(abs(self.eIX.error)[0] + abs(self.eIX.error)[1] + (abs(self.eIX.error)[2]))
-        reward_eR  = -CR*(eR/pi) # [0., pi] -> [0., 1.0]
-        reward_eIR = 0. #-CIb1*self.eIR.error
-        # reward_eR = -CR*(np.nansum(eR)) # -CR*(norm(eR, 2)**2)
-        # reward_eR = -CR*abs(eR[2])
+        reward_eb1  = -Cb1*(eb1/pi) # [0., pi] -> [0., 1.0]
         reward_eV = -Cv*(norm(eV, 2)**2)
         reward_eW = -CW*(norm(W, 2)**2)
 
-        reward = self.reward_alive + (reward_eX + reward_eIX + reward_eR + reward_eIR + reward_eV + reward_eW)
+        reward = self.reward_alive + (reward_eX + reward_eb1 + reward_eV + reward_eW)
         #reward *= 0.1 # rescaled by a factor of 0.1
 
         return reward

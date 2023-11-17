@@ -8,6 +8,7 @@ import numpy as np
 from numpy import random
 from gym_rotor.envs.quad_utils import *
 from gym_rotor.wrappers.decoupled_yaw_wrapper import DecoupledWrapper
+from gym_rotor.wrappers.coupled_yaw_wrapper import CoupledWrapper
 from algos.replay_buffer import ReplayBuffer
 from algos.matd3 import MATD3
 from algos.td3 import TD3
@@ -34,14 +35,14 @@ class Learner:
             self.args.obs_dim_n = [15, 5]   
             self.args.action_dim_n = [4, 1] 
         elif self.framework == "SARL":
-            """--------------------------------------------------------------------------------------------------
-            | Agents  | Observations           | obs_dim | Actions:       | act_dim | Rewards                   |
-            | #agent1 | {ex, ev, R, eW, eIx}   | 21      | {T1,T2,T3,T4}  | 4       | f(ex, ev, eb1, eW, eIx)   |
-            --------------------------------------------------------------------------------------------------"""
-            self.env = gym.make("Quad-v0", render_mode="human")
+            """--------------------------------------------------------------------------------------------------------------
+            | Agents  | Observations               | obs_dim | Actions:      | act_dim | Rewards                            |
+            | #agent1 | {ex, ev, R, eW, eIx, eIb1} | 22      | {T1,T2,T3,T4} | 4       | f(ex, ev, eb1, eb3, eW, eIx, eIb1) |
+            ---------------------------------------------------------------------------------------------------------------"""
+            self.env = CoupledWrapper()
             self.args.N = 1 # The number of agents
-            self.args.obs_dim_n = [21, 21]
-            self.args.action_dim_n = [4, 4] 
+            self.args.obs_dim_n = [22]
+            self.args.action_dim_n = [4] 
         self.eval_max_steps = self.args.eval_max_steps/self.env.dt 
 
         # Set seed for random number generators:
@@ -91,7 +92,11 @@ class Learner:
         obs_n, done_episode = self.env.reset(env_type='train', seed=self.seed), False
         b1d = self.env.b1d
         max_total_reward = [0.9*self.eval_max_steps,0.9*self.eval_max_steps] # 90% of max_steps to save best models
-        episode_timesteps, episode_reward = 0, [0.,0.]
+        episode_timesteps = 0
+        if self.framework in ("DTDE", "CTDE"):
+            episode_reward = [0.,0.]
+        elif self.framework == "SARL":
+            episode_reward = [0.]
 
         # Training loop:
         for self.total_timesteps in range(int(self.args.max_timesteps)):
@@ -108,16 +113,16 @@ class Learner:
             obs_next_n, r_n, done_n, _, _ = self.env.step(copy.deepcopy(action))
             eX = np.round(obs_next_n[0][0:3]*self.env.x_lim, 5) # position error [m]
             if self.framework in ("DTDE", "CTDE"):
-                eR = ang_btw_two_vectors(obs_next_n[1][0:3], b1d) # heading error [rad]
+                eb1 = ang_btw_two_vectors(obs_next_n[1][0:3], b1d) # heading error [rad]
             elif self.framework == "SARL":
-                eR = ang_btw_two_vectors(obs_next_n[0][6:9], b1d) # heading error [rad]
+                eb1 = ang_btw_two_vectors(obs_next_n[0][6:9], b1d) # heading error [rad]
 
             # Episode termination:
             if episode_timesteps == self.args.max_steps: # Episode terminated!
                 done_episode = True
                 done_n[0] = True if (abs(eX) <= 0.05).all() else False # Problem is solved!
                 if self.framework in ("DTDE", "CTDE"):
-                    done_n[1] = True if abs(eR) <= 0.05 else False # Problem is solved!
+                    done_n[1] = True if abs(eb1) <= 0.05 else False # Problem is solved!
         
             # Store a set of transitions in replay buffer:
             self.replay_buffer.store_transition(obs_n, act_n, r_n, obs_next_n, done_n)
@@ -144,7 +149,7 @@ class Learner:
                 if self.framework in ("DTDE", "CTDE"):
                     log_eval.write('{}\t {}\n'.format(self.total_timesteps, eval_reward))
                 elif self.framework == "SARL":
-                    log_eval.write('{}\t {}\n'.format(self.total_timesteps, eval_reward[0]))
+                    log_eval.write('{}\t {}\n'.format(self.total_timesteps, eval_reward))
                 log_eval.flush()
 
                 # Save best model:
@@ -161,17 +166,14 @@ class Learner:
 
             # If done_episode:
             if any(done_n) == True or done_episode == True:
-                if self.framework in ("DTDE", "CTDE"):
-                    print(f"total_timestpes: {self.total_timesteps+1}, time_stpes: {episode_timesteps}, reward: {episode_reward}, eX: {eX}, eR: {eR:.3f}")
-                elif self.framework == "SARL":
-                    print(f"total_timestpes: {self.total_timesteps+1}, time_stpes: {episode_timesteps}, reward: {episode_reward[0]}, eX: {eX}, eR: {eR:.3f}")
+                print(f"total_timestpes: {self.total_timesteps+1}, time_stpes: {episode_timesteps}, reward: {episode_reward}, eX: {eX}, eb1: {eb1:.3f}")
 
                 # Log data:
                 if self.total_timesteps >= self.args.start_timesteps:
                     if self.framework in ("DTDE", "CTDE"):
                         log_step.write('{}\t {}\n'.format(self.total_timesteps, episode_reward))
                     elif self.framework == "SARL":
-                        log_step.write('{}\t {}\n'.format(self.total_timesteps, episode_reward[0]))
+                        log_step.write('{}\t {}\n'.format(self.total_timesteps, episode_reward))
                     log_step.flush()
                 
                 # Reset environment:
@@ -193,11 +195,11 @@ class Learner:
             --------------------------------------------------------------------------------------------------"""
             eval_env = DecoupledWrapper()
         elif self.framework == "SARL":
-            """--------------------------------------------------------------------------------------------------
-            | Agents  | Observations           | obs_dim | Actions:       | act_dim | Rewards                   |
-            | #agent1 | {ex, ev, R, eW, eIx}   | 21      | {T1,T2,T3,T4}  | 4       | f(ex, ev, eb1, eW, eIx)   |
-            --------------------------------------------------------------------------------------------------"""
-            eval_env = gym.make("Quad-v0", render_mode="human")
+            """--------------------------------------------------------------------------------------------------------------
+            | Agents  | Observations               | obs_dim | Actions:      | act_dim | Rewards                            |
+            | #agent1 | {ex, ev, R, eW, eIx, eIb1} | 22      | {T1,T2,T3,T4} | 4       | f(ex, ev, eb1, eb3, eW, eIx, eIb1) |
+            ---------------------------------------------------------------------------------------------------------------"""
+            eval_env = CoupledWrapper()
 
         # Fixed seed is used for the eval environment.
         seed = 123
@@ -207,15 +209,19 @@ class Learner:
         np.random.seed(seed)
 
         # Save solved model:
-        success_count, success = [], [False,False] if args.save_model else None
-        #success_count = [] if args.save_model else None
+        success_count = []
+        if self.framework in ("DTDE", "CTDE"):
+            success, eval_reward = [False,False], [0.,0.]
+        elif self.framework == "SARL":
+            success, eval_reward = [False], [0.]
 
-        eval_reward = [0.,0.]
-        # eval_reward = 0.
         print("---------------------------------------------------------------------------------------------------------------------")
         for num_eval in range(self.args.num_eval):
-            episode_timesteps, episode_reward = 0, [0.,0.]
-            # episode_timesteps, episode_reward = 0, 0.
+            episode_timesteps = 0
+            if self.framework in ("DTDE", "CTDE"):
+                episode_reward = [0.,0.]
+            elif self.framework == "SARL":
+                episode_reward = [0.]
 
             # Reset envs:
             obs_n = eval_env.reset(env_type='eval', seed=self.seed)
@@ -255,18 +261,14 @@ class Learner:
                 if any(done_n) or episode_timesteps == self.eval_max_steps:
                     eX = np.round(obs_next_n[0][0:3]*eval_env.x_lim, 5) # position error [m]
                     if self.framework in ("DTDE", "CTDE"):
-                        eR = ang_btw_two_vectors(obs_next_n[1][0:3], b1d) # heading error [rad]
-                        print(f"eval_iter: {num_eval+1}, time_stpes: {episode_timesteps}, episode_reward: {episode_reward}, eX: {eX}, eR: {eR:.3f}")
+                        eb1 = ang_btw_two_vectors(obs_next_n[1][0:3], b1d) # heading error [rad]
+                        success[0] = True if (abs(eX) <= 0.05).all() else False
+                        success[1] = True if abs(eb1) <= 0.02 else False
                     elif self.framework == "SARL":
-                        eR = ang_btw_two_vectors(obs_next_n[0][6:9], b1d) # heading error [rad]
-                        print(f"eval_iter: {num_eval+1}, time_stpes: {episode_timesteps}, episode_reward: {episode_reward[0]}, eX: {eX}, eR: {eR:.3f}")
-                    # for agent_id in range(self.args.N):
-                    #      success_count[agent_id] = True if (abs(eX) <= 0.05).all() and abs(eR) <= 0.05 else False
-                    success[0] = True if (abs(eX) <= 0.05).all() else False
-                    success[1] = True if abs(eR) <= 0.02 else False
+                        eb1 = ang_btw_two_vectors(obs_next_n[0][6:9], b1d) # heading error [rad]
+                        success[0] = True if (abs(eX) <= 0.05).all() else False
+                    print(f"eval_iter: {num_eval+1}, time_stpes: {episode_timesteps}, episode_reward: {episode_reward}, eX: {eX}, eb1: {eb1:.3f}")
                     success_count.append(success)
-                    #success = True if (abs(eX) <= 0.05).all() and abs(eR) <= 0.05 else False
-                    #success_count.append(success)
                     break
 
             eval_reward = [eval_reward[agent_id]+epi_r for agent_id, epi_r in zip(range(self.args.N), episode_reward)]
@@ -285,10 +287,7 @@ class Learner:
         eval_reward = [float('{:.4f}'.format(eval_r/self.args.num_eval)) for eval_r in eval_reward]
         #eval_reward = eval_reward / self.args.num_eval
         print("------------------------------------------------------------------------------------------")
-        if self.framework in ("DTDE", "CTDE"):
-            print(f"total_timesteps: {self.total_timesteps} \t eval_reward: {eval_reward} \t explor_noise_std: {self.explor_noise_std}")
-        elif self.framework == "SARL":
-            print(f"total_timesteps: {self.total_timesteps} \t eval_reward: {eval_reward[0]} \t explor_noise_std: {self.explor_noise_std}")
+        print(f"total_timesteps: {self.total_timesteps} \t eval_reward: {eval_reward} \t explor_noise_std: {self.explor_noise_std}")
         print("------------------------------------------------------------------------------------------")
 
         # Save solved model:
