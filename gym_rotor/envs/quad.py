@@ -64,6 +64,8 @@ class QuadEnv(gym.Env):
         self.e1 = np.array([1.,0.,0.])
         self.e2 = np.array([0.,1.,0.])
         self.e3 = np.array([0.,0.,1.])
+        self.use_UDM = args.use_UDM # uniform domain randomization for sim-to-real transfer
+        self.UDM_percentage = args.UDM_percentage
 
         # Coefficients in reward function:
         self.framework_id = args.framework_id
@@ -180,7 +182,7 @@ class QuadEnv(gym.Env):
         super().reset(seed=seed)
 
         # Domain randomization:
-        self.set_random_parameters(env_type)
+        self.set_random_parameters(env_type) if self.use_UDM else None
 
         # Reset states & Normalization:
         state = np.array(np.zeros(18))
@@ -374,7 +376,7 @@ class QuadEnv(gym.Env):
         self.c_tw = 2.2 # thrust-to-weight coefficients
 
         if env_type == 'train':
-            uncertainty_range = 0.05 # *100 = [%]
+            uncertainty_range = self.UDM_percentage/100
             # Quadrotor parameters:
             m_range = self.m * uncertainty_range
             d_range = self.d * uncertainty_range

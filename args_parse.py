@@ -28,6 +28,9 @@ def create_parser():
     parser.add_argument('--Cb1', default=2.0, type=float, metavar='G', help='Attitude coeff. (default: )')
     parser.add_argument('--CW3', default=0.2, type=float, metavar='G', help='Angular velocity coeff. (default: )')
     parser.add_argument('--CIb1', default=0.06, type=float, metavar='G', help='Attitude integral coeff. (default: )')
+    # Domain randomization: 
+    parser.add_argument("--use_UDM", default=True, type=bool, help="Uniform domain randomization for sim-to-real")
+    parser.add_argument("--UDM_percentage", default=10, type=float, help="± randomness 0 ~ 100[%]")
 
     # args of agents:
     parser.add_argument("--start_timesteps", default=int(5e5), type=int, help='Number of steps for uniform-random action selection (default: int(5e5))')
