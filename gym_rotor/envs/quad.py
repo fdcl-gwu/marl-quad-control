@@ -24,7 +24,7 @@ class QuadEnv(gym.Env):
         args = parser.parse_args()
 
         # Quadrotor parameters:
-        self.m = 1.994 # mass of quad, [kg]
+        self.m = 2.15 # mass of quad, [kg]
         self.d = 0.23 # arm length, [m]
         self.J = np.diag([0.022, 0.022, 0.035]) # inertia matrix of quad, [kg m2]
         self.c_tf = 0.0135 # torque-to-thrust coefficients
@@ -64,6 +64,8 @@ class QuadEnv(gym.Env):
         self.e1 = np.array([1.,0.,0.])
         self.e2 = np.array([0.,1.,0.])
         self.e3 = np.array([0.,0.,1.])
+        self.use_UDM = args.use_UDM # uniform domain randomization for sim-to-real transfer
+        self.UDM_percentage = args.UDM_percentage
 
         # Coefficients in reward function:
         self.framework_id = args.framework_id
@@ -80,20 +82,21 @@ class QuadEnv(gym.Env):
             # Agent2's reward:
             self.Cb1 = args.Cb1
             self.CW3 = args.CW3
-            self.CIR = args.CIR
-            self.reward_min_2 = -np.ceil(self.Cb1+self.CW3+self.CIR)
+            self.CIb1 = args.CIb1
+            self.reward_min_2 = -np.ceil(self.Cb1+self.CW3+self.CIb1)
         elif self.framework_id == "SARL":
             self.Cx  = args.Cx
             self.CIx = args.CIx
             self.Cv  = args.Cv
-            self.CR  = args.Cb1
-            self.CIR = args.CIR
+            self.Cb1  = args.Cb1
+            self.CIb1 = args.CIb1
+            self.Cb3  = args.Cb3
             self.CW = args.Cw12
-            self.reward_min = -np.ceil(self.Cx+self.CIx+self.Cv+self.CR+self.CIR+self.CW)
+            self.reward_min = -np.ceil(self.Cx+self.CIx+self.Cv+self.Cb1+self.CIb1+self.Cb3+self.CW)
 
         # Integral terms:
         self.use_integral = True
-        self.sat_sigma = 3.
+        self.sat_sigma = 1.
         self.eIX = IntegralErrorVec3() # Position integral error
         self.eIR = IntegralError() # Attitude integral error
         self.eIX.set_zero() # Set all integrals to zero
@@ -105,7 +108,7 @@ class QuadEnv(gym.Env):
         self.b1d    = np.array([1.,0.,0.]) # desired heading direction        
         self.Rd     = np.eye(3)
 
-        # limits of states:
+        # Limits of states:
         self.x_lim = 3.0 # [m]
         self.v_lim = 5.0 # [m/s]
         self.W_lim = 2*pi # [rad/s]
@@ -154,20 +157,21 @@ class QuadEnv(gym.Env):
 
         # Reward function:
         reward = self.reward_wrapper(obs)
+        if self.framework_id in ("DTDE", "CTDE"):
+            reward[0] = interp(reward[0], [self.reward_min_1, 0.], [0., 1.]) # linear interpolation [0,1]
+            reward[1] = interp(reward[1], [self.reward_min_2, 0.], [0., 1.]) # linear interpolation [0,1]
+        elif self.framework_id == "SARL":
+            reward[0] = interp(reward[0], [self.reward_min, 0.], [0., 1.]) # linear interpolation [0,1]  
 
         # Terminal condition:
         done = self.done_wrapper(obs)
         if done[0]: # Out of boundry or crashed!
             reward[0] = self.reward_crash
-
         if self.framework_id in ("DTDE", "CTDE"):
-            reward[0] = interp(reward[0], [self.reward_min_1, 0.], [0., 1.]) # linear interpolation [0,1]
             if done[1]: # Out of boundry or crashed!
                 reward[1] = self.reward_crash
-            reward[1] = interp(reward[1], [self.reward_min_2, 0.], [0., 1.]) # linear interpolation [0,1]
-        elif self.framework_id == "SARL":
-            reward[0] = interp(reward, [self.reward_min, 0.], [0., 1.]) # linear interpolation [0,1]    
-        # return obs, reward, done, False, {}
+
+        #return obs, reward, done, False, {}
         return obs, reward, done, self.state, {}
 
 
@@ -175,8 +179,11 @@ class QuadEnv(gym.Env):
         seed: Optional[int] = None,
         options: Optional[dict] = None,
     ):
-        
         super().reset(seed=seed)
+
+        # Domain randomization:
+        self.set_random_parameters(env_type) if self.use_UDM else None
+
         # Reset states & Normalization:
         state = np.array(np.zeros(18))
         state[6:15] = np.eye(3).reshape(1, 9, order='F')
@@ -267,8 +274,7 @@ class QuadEnv(gym.Env):
             self.state = sol.y[:,-1]
 
         # Normalization: [max, min] -> [-1, 1]
-        x_norm, v_norm, R, W_norm = state_normalization(self.state, self.x_lim, self.v_lim, self.W_lim)
-        R_vec = R.reshape(9, 1, order='F').flatten()
+        x_norm, v_norm, R_vec, W_norm = state_normalization(self.state, self.x_lim, self.v_lim, self.W_lim)
         self.state = np.concatenate((x_norm, v_norm, R_vec, W_norm), axis=0)
 
         return self.state
@@ -280,17 +286,15 @@ class QuadEnv(gym.Env):
 
         # Reward function coefficients:
         Cx = self.Cx # pos coef.
-        CR = self.CR # att coef.
+        Cb1 = self.Cb1 # heading coef.
         Cv = self.Cv # vel coef.
         CW = self.CW # ang_vel coef.
-        CIx = self.CIx 
-        CIR = self.CIR 
 
         # Errors:
         eX = x - self.xd     # position error
         eV = v - self.xd_dot # velocity error
         # Heading errors:
-        eR = ang_btw_two_vectors(get_current_b1(R), self.b1d) # [rad]
+        eb1 = ang_btw_two_vectors(get_current_b1(R), self.b1d) # [rad]
         # Attitude errors:
         '''
         RdT_R = self.Rd.T @ R
@@ -299,35 +303,13 @@ class QuadEnv(gym.Env):
         eR = 0.5 * vee(RdT_R - RdT_R.T).flatten()
         '''
 
-		#---- Calculate integral terms to steady-state errors ----#
-        # Position integral terms:
-        if self.use_integral:
-            self.eIX.integrate(eX, self.dt) # eX + eV
-            self.eIX.error = clip(self.eIX.error, -self.sat_sigma, self.sat_sigma)
-        else:
-            self.eIX.set_zero()
-        # Attitude integral terms:
-        '''
-        if self.use_integral:
-            self.eIR.integrate(eR, self.dt) # eR + eW
-            self.eIR.error = clip(self.eIR.error, -self.sat_sigma, self.sat_sigma)
-        else:
-            self.eIR.set_zero()
-        '''
-
         # Reward function:
         reward_eX = -Cx*(norm(eX, 2)**2) 
-        # reward_eX = -Cx*(abs(eX)[0]**2 + abs(eX)[1]**2 + 1.5*(abs(eX)[2]**2)) # 0.7
-        reward_eIX = -CIx*(norm(self.eIX.error, 2)**2)
-        # reward_eIX = -CIx*(abs(self.eIX.error)[0] + abs(self.eIX.error)[1] + (abs(self.eIX.error)[2]))
-        reward_eR  = -CR*(eR/pi) # [0., pi] -> [0., 1.0]
-        reward_eIR = 0. #-CIR*self.eIR.error
-        # reward_eR = -CR*(np.nansum(eR)) # -CR*(norm(eR, 2)**2)
-        # reward_eR = -CR*abs(eR[2])
+        reward_eb1  = -Cb1*(eb1/pi) # [0., pi] -> [0., 1.0]
         reward_eV = -Cv*(norm(eV, 2)**2)
         reward_eW = -CW*(norm(W, 2)**2)
 
-        reward = self.reward_alive + (reward_eX + reward_eIX + reward_eR + reward_eIR + reward_eV + reward_eW)
+        reward = self.reward_alive + (reward_eX + reward_eb1 + reward_eV + reward_eW)
         #reward *= 0.1 # rescaled by a factor of 0.1
 
         return reward
@@ -378,10 +360,61 @@ class QuadEnv(gym.Env):
             self.init_R = 50 * self.D2R  # ±50 deg 
             self.init_W = self.W_lim*0.5 # 50%; initial ang vel error, [rad/s]
         elif env_type == 'eval':
-            self.init_x = 1.0 # initial pos error,[m]
-            self.init_v = self.v_lim*0.1 # 10%; initial vel error, [m/s]
-            self.init_R = 10 * self.D2R  # ±10 deg 
-            self.init_W = self.W_lim*0.1 # 10%; initial ang vel error, [rad/s]
+            self.init_x = 0.4 # initial pos error,[m]
+            self.init_v = self.v_lim*0.01 # 1%; initial vel error, [m/s]
+            self.init_R = 2 * self.D2R  # ±10 deg 
+            self.init_W = self.W_lim*0.01 # 1%; initial ang vel error, [rad/s]
+
+
+    def set_random_parameters(self, env_type='train'):
+        # Nominal quadrotor parameters:
+        self.m = 2.15 # mass of quad, [kg]
+        self.d = 0.23 # arm length, [m]
+        J1, J2, J3 = 0.022, 0.022, 0.035
+        self.J = np.diag([J1, J2, J3]) # inertia matrix of quad, [kg m2]
+        self.c_tf = 0.0135 # torque-to-thrust coefficients
+        self.c_tw = 2.2 # thrust-to-weight coefficients
+
+        if env_type == 'train':
+            uncertainty_range = self.UDM_percentage/100
+            # Quadrotor parameters:
+            m_range = self.m * uncertainty_range
+            d_range = self.d * uncertainty_range
+            J1_range = J1 * uncertainty_range
+            J3_range = J3 * uncertainty_range
+            c_tf_range = self.c_tf * uncertainty_range
+            c_tw_range = self.c_tw * uncertainty_range
+
+            self.m = uniform(low=(self.m - m_range), high=(self.m + m_range)) # [kg]
+            self.d = uniform(low=(self.d - d_range), high=(self.d + d_range)) # [m]
+            J1 = uniform(low=(J1 - J1_range), high=(J1 + J1_range))
+            J2 = J1 
+            J3 = uniform(low=(J3 - J3_range), high=(J3 + J3_range))
+            self.J  = np.diag([J1, J2, J3]) # [kg m2]
+            self.c_tf = uniform(low=(self.c_tf - c_tf_range), high=(self.c_tf + c_tf_range))
+            self.c_tw = uniform(low=(self.c_tw - c_tw_range), high=(self.c_tw + c_tw_range))
+            
+            # TODO: Motor and Sensor noise: thrust_noise_ratio, sigma, cutoff_freq
+            
+        # Force and Moment:
+        self.f = self.m * self.g # magnitude of total thrust to overcome  
+                                    # gravity and mass (No air resistance), [N]
+        self.hover_force = self.m * self.g / 4.0 # thrust magnitude of each motor, [N]
+        self.min_force = 0.5 # minimum thrust of each motor, [N]
+        self.max_force = self.c_tw * self.hover_force # maximum thrust of each motor, [N]
+        self.fM = np.zeros((4, 1)) # Force-moment vector
+        self.forces_to_fM = np.array([
+            [1.0, 1.0, 1.0, 1.0],
+            [0.0, -self.d, 0.0, self.d],
+            [self.d, 0.0, -self.d, 0.0],
+            [-self.c_tf, self.c_tf, -self.c_tf, self.c_tf]
+        ]) # Conversion matrix of forces to force-moment 
+        self.fM_to_forces = np.linalg.inv(self.forces_to_fM)
+        self.avrg_act = (self.min_force+self.max_force)/2.0 
+        self.scale_act = self.max_force-self.avrg_act # actor scaling
+
+        # print('m:',f'{self.m:.3f}','d:',f'{self.d:.3f}','J:',f'{J1:.4f}',f'{J3:.4f}','c_tf:',f'{self.c_tf:.4f}','c_tw:',f'{self.c_tw:.3f}')
+        
 
     def render(self, mode='human', close=False):
         from vpython import canvas, vector, box, sphere, color, rate, cylinder, arrow, ring, scene, textures
@@ -615,7 +648,7 @@ class QuadEnv(gym.Env):
         self.render_index += 1        
         """
 
-        rate(30) # FPS
+        rate(100) # FPS
 
         return True
 

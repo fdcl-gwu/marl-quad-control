@@ -30,6 +30,7 @@ class MATD3(object):
         self.target_noise = args.target_noise
         self.noise_clip = args.noise_clip
         self.policy_update_freq = args.policy_update_freq
+        self.lam_T, self.lam_S, self.lam_M = args.lam_T, args.lam_S, args.lam_M
         self.total_it = 0
 
         # Create an individual actor and critic for each agent according to the 'agent_id':
@@ -113,12 +114,12 @@ class MATD3(object):
             actor_loss = -self.critic.Q1(batch_obs_n, batch_act_n).mean() # Only use Q1
 
             # Regularizing action policies for smooth control
-            lam_T = 0.6 # 0.5 - 0.8 # Temporal Smoothness
+            lam_T = self.lam_T # Temporal Smoothness
             batch_act_next_n[self.agent_id] = self.actor(batch_obs_next_n[self.agent_id]).clamp(-self.max_action, self.max_action)
             Loss_T = F.mse_loss(batch_act_n[self.agent_id], batch_act_next_n[self.agent_id])
             actor_loss += lam_T * Loss_T
 
-            lam_S = 0.3 # 0.3 - 0.5 # Spatial Smoothness
+            lam_S = self.lam_S # Spatial Smoothness
             noise_S = (
                 torch.normal(mean=0., std=0.05, size=(1, self.action_dim))
                 ).clamp(-self.noise_clip, self.noise_clip).to(device) # mean and standard deviation
@@ -126,7 +127,7 @@ class MATD3(object):
             Loss_S = F.mse_loss(batch_act_n[self.agent_id], action_bar)
             actor_loss += lam_S * Loss_S
 
-            lam_M = 0.5 # 0.2 - 0.5 # Magnitude Smoothness
+            lam_M = self.lam_M # Magnitude Smoothness
             batch_size = batch_act_n[self.agent_id].shape[0]
             if self.agent_id == 0:
                 f_total_hover = np.interp(4.*env.hover_force, 
