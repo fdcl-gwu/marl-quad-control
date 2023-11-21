@@ -22,11 +22,15 @@ class DecoupledWrapper(QuadEnv):
         args = parser.parse_args()
         self.alpha = args.alpha # addressing noise or delay
 
+        # Yaw angle error: 
+        self.eb1 = 0. # angle between b1 and b1c[0, pi)
+
         # b3d commands:
         self.b3d = np.array([0.,0.,1])
 
         # limits of states:
-        self.eIx_lim = self.eIb1_lim = 10.
+        self.eIx_lim  = 10.0 
+        self.eIb1_lim = 10.0 
 
 
     def reset(self, env_type='train',
@@ -41,9 +45,8 @@ class DecoupledWrapper(QuadEnv):
         self.M3 = 0. # [Nm]
 
         # Reset errors:
-        self.ex = np.zeros(3)
-        self.ev = np.zeros(3)
-        self.eb1 = 0.
+        self.ex, self.ev = np.zeros(3), np.zeros(3)
+        self.eb1, self.eb3 = 0., 0.
 
         # Reset integral terms:
         self.eIx  = np.zeros(3)
@@ -54,7 +57,7 @@ class DecoupledWrapper(QuadEnv):
         # Agent1's obs:
         obs_1 = np.concatenate((decoupled_obs1_decomposition(self.state, self.eIx)), axis=None)
         # Agent2's obs:
-        obs_2 = np.concatenate((decoupled_obs2_decomposition(self.state, self.eIb1)), axis=None)
+        obs_2 = np.concatenate((decoupled_obs2_decomposition(self.state, self.eb1, self.eIb1)), axis=None)
 
         return [obs_1, obs_2]
         
@@ -85,16 +88,6 @@ class DecoupledWrapper(QuadEnv):
         self.fM[2] = b2.T @ self.tau - self.J[2,2]*W[2]*W[0] # M2
         self.fM[3] = self.M3
 
-        """
-        # FM matrix to thrust of each motor:
-        forces = (self.fM_to_forces @ self.fM
-            ).clip(self.min_force, self.max_force).flatten()
-        self.f1 = forces[0]
-        self.f2 = forces[1]
-        self.f3 = forces[2]
-        self.f4 = forces[3]
-        """
-
         # Solve ODEs: method = 'DOP853', 'BDF', 'Radau', 'RK45', ...
         sol = solve_ivp(self.decouple_EoM, [0, self.dt], state, method='DOP853')
         self.state = sol.y[:,-1]
@@ -110,40 +103,39 @@ class DecoupledWrapper(QuadEnv):
         self.eIX.integrate(-self.alpha*self.eIX.error + x_norm*self.x_lim, self.dt) 
         self.eIx = clip(self.eIX.error/self.eIx_lim, -self.sat_sigma, self.sat_sigma)
 
-        b1, _, _ = decoupled_obs2_decomposition(self.state, self.eIb1) # Agent2's obs
+        b1, _, _, _ = decoupled_obs2_decomposition(self.state, self.eb1, self.eIb1) # Agent2's obs
         b1c = -(hat(b3) @ hat(b3)) @ self.b1d # desired b1 
-        self.eb1 = 1 - b1@b1c # b1 error
-        self.eIR.integrate(self.eb1, self.dt) # b1 integral error
+        self.eb1 = ang_btw_two_vectors(b1, b1c)/np.pi # b1 error, [0,pi) ->[0,1]
+        self.eb3 = ang_btw_two_vectors(b3, self.b3d)/np.pi # [0,pi) ->[0,1]
+        self.eIR.integrate(self.eb1*np.pi, self.dt) # b1 integral error
         self.eIb1 = clip(self.eIR.error/self.eIb1_lim, -self.sat_sigma, self.sat_sigma)
 
         # Agent1's obs:
         obs_1 = np.concatenate((decoupled_obs1_decomposition(self.state, self.eIx)), axis=None)
         # Agent2's obs:
-        obs_2 = np.concatenate((decoupled_obs2_decomposition(self.state, self.eIb1)), axis=None)
+        obs_2 = np.concatenate((decoupled_obs2_decomposition(self.state, self.eb1, self.eIb1)), axis=None)
 
         return [obs_1, obs_2]
     
 
     def reward_wrapper(self, obs):
         # Agent1's obs
-        _, _, b3, w12, eIx = decoupled_obs1_decomposition(self.state, self.eIx) 
+        _, _, _, w12, eIx = decoupled_obs1_decomposition(self.state, self.eIx) 
 
         # Agent1's reward:
-        eb3 = ang_btw_two_vectors(b3, self.b3d) # [rad]
-
         reward_eX   = -self.Cx*(norm(self.ex, 2)**2) 
         reward_eIX  = -self.CIx*(norm(eIx, 2)**2)
         reward_eV   = -self.Cv*(norm(self.ev, 2)**2)
-        reward_eb3  = -self.Cb3*(eb3/np.pi) 
+        reward_eb3  = -self.Cb3*(self.eb3) 
         reward_ew12 = -self.Cw12*(norm(w12, 2)**2)
         rwd_1 = reward_eX + reward_eIX+ reward_eV + reward_eb3 + reward_ew12
 
         # Agent2's obs
-        _, W3, eIb1 = decoupled_obs2_decomposition(self.state, self.eIb1)
+        _, W3, eb1, eIb1 = decoupled_obs2_decomposition(self.state, self.eb1, self.eIb1)
 
         # Agent2's reward:
-        reward_eb1  = -self.Cb1*(self.eb1/np.pi)
-        reward_eIb1 = -self.CIb1*abs(eIb1)
+        reward_eb1  = -self.Cb1*(eb1)
+        reward_eIb1 = -self.CIb1*abs(eIb1**2)
         reward_eW3  = -self.CW3*(abs(W3)**2)
         rwd_2 = reward_eb1 + reward_eIb1 + reward_eW3 
 
@@ -167,7 +159,7 @@ class DecoupledWrapper(QuadEnv):
         )
 
         # Agent2's obs
-        _, W3, eIb1 = decoupled_obs2_decomposition(self.state, self.eIb1)
+        _, W3, _, eIb1 = decoupled_obs2_decomposition(self.state, self.eb1, self.eIb1)
 
         # Agent2's terminal states:
         done_2 = False

@@ -22,6 +22,9 @@ class CoupledWrapper(QuadEnv):
         args = parser.parse_args()
         self.alpha = args.alpha # addressing noise or delay
 
+        # Yaw angle error: 
+        self.eb1 = 0. # angle between b1 and b1c[0, pi)
+
         # b3d commands:
         self.b3d = np.array([0.,0.,1])
 
@@ -48,7 +51,7 @@ class CoupledWrapper(QuadEnv):
         self.eIR.set_zero()
 
         # Single-agent's obs:
-        obs = np.concatenate((self.state, self.eIx, self.eIb1), axis=None)
+        obs = np.concatenate((self.state, self.eIx, self.eb1, self.eIb1), axis=None)
 
         return [obs]
 
@@ -59,7 +62,7 @@ class CoupledWrapper(QuadEnv):
             4 * (self.scale_act * action[0] + self.avrg_act)
             ).clip(4*self.min_force, 4*self.max_force)
 
-        self.f   = f_total # [N]
+        self.f = f_total # [N]
         self.M = action[1:4] # [Nm]
         
         return action
@@ -89,13 +92,13 @@ class CoupledWrapper(QuadEnv):
         self.eIx = clip(self.eIX.error, -self.sat_sigma, self.sat_sigma)/self.eIx_lim
 
         b1c = -(hat(b3) @ hat(b3)) @ self.b1d # desired b1 
-        self.eb1 = 1 - b1@b1c # b1 error
-        self.eb3 = ang_btw_two_vectors(b3, self.b3d) # [rad]
-        self.eIR.integrate(self.eb1, self.dt) # b1 integral error
+        self.eb1 = ang_btw_two_vectors(b1, b1c)/np.pi # b1 error, [0,pi) ->[0,1]
+        self.eb3 = ang_btw_two_vectors(b3, self.b3d)/np.pi # [0,pi) ->[0,1]
+        self.eIR.integrate(self.eb1*np.pi, self.dt) # b1 integral error
         self.eIb1 = clip(self.eIR.error, -self.sat_sigma, self.sat_sigma)/self.eIb1_lim
 
         # Single-agent's obs:
-        obs = np.concatenate((self.state, self.eIx, self.eIb1), axis=None)
+        obs = np.concatenate((self.state, self.eIx, self.eb1, self.eIb1), axis=None)
 
         return [obs]
     
@@ -108,9 +111,9 @@ class CoupledWrapper(QuadEnv):
         reward_eX   = -self.Cx*(norm(self.ex, 2)**2) 
         reward_eIX  = -self.CIx*(norm(self.eIx, 2)**2)
         reward_eV   = -self.Cv*(norm(self.ev, 2)**2)
-        reward_eb1  = -self.Cb1*(self.eb1/np.pi)
-        reward_eIb1 = -self.CIb1*abs(self.eIb1)
-        reward_eb3  = -self.Cb3*(self.eb3/np.pi) 
+        reward_eb1  = -self.Cb1*(self.eb1)
+        reward_eIb1 = -self.CIb1*abs(self.eIb1**2)
+        reward_eb3  = -self.Cb3*(self.eb3) 
         reward_eW   = -self.CW*(norm(W, 2)**2)
         
         rwd = reward_eX + reward_eIX + reward_eV + reward_eb1 + reward_eIb1 + reward_eb3 + reward_eW
@@ -120,7 +123,7 @@ class CoupledWrapper(QuadEnv):
 
     def done_wrapper(self, obs):
         # Single-agent's obs:
-        x, v, R, W = state_decomposition(self.state) 
+        x, v, _, W = state_decomposition(self.state) 
 
         # Single-agent's terminal states:
         done = False

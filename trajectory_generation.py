@@ -63,10 +63,10 @@ class TrajectoryGeneration:
         self.landing_motor_cutoff_height = -0.25  # [m]
 
         # Circle:
-        self.num_circles = 10
-        self.circle_linear_v = 0.7
-        self.circle_W = 0.1
-        self.circle_radius = 2.0
+        self.num_circles = 2
+        self.circle_linear_v = 0.4
+        self.circle_W = 0.8
+        self.circle_radius = 0.7
 
 
     def get_desired(self, state, mode):
@@ -311,23 +311,27 @@ class TrajectoryGeneration:
         ex_norm = self.x_norm - self.xd_norm # position error
         ev_norm = self.v_norm - self.vd_norm # velocity error
         eW_norm = self.W_norm - self.Wd_norm # ang vel error
+
+        # Compute yaw angle error: 
+        b1 = self.R @ np.array([1.,0.,0.])
+        b2 = self.R @ np.array([0.,1.,0.])
+        b3 = self.R @ np.array([0.,0.,1.])
+        b1c = -(hat(b3) @ hat(b3)) @ self.b1d # desired b1 
+        eb1 = ang_btw_two_vectors(b1, b1c)/np.pi # b1 error, [0,pi) ->[0,1]
         if framework in ("DTDE", "CTDE"):
             # Agent1's obs:
             eIx = obs_n[0][12:15]
-            b1 = self.R @ np.array([1.,0.,0.])
-            b2 = self.R @ np.array([0.,1.,0.])
-            b3 = self.R @ np.array([0.,0.,1.])
             ew12 = eW_norm[0]*b1 + eW_norm[1]*b2
             obs_1 = np.concatenate((ex_norm, ev_norm, b3, ew12, eIx), axis=None)
             # Agent2's obs:
-            b1, eW3_norm, eIb1 = obs_n[1][0:3], eW_norm[2], obs_n[1][4]
-            obs_2 = np.concatenate((b1, eW3_norm, eIb1), axis=None)
+            eW3_norm, eIb1 = eW_norm[2], obs_n[1][4]
+            obs_2 = np.concatenate((b1, eW3_norm, eb1, eIb1), axis=None)
             error_obs_n = [obs_1, obs_2]
         elif framework == "SARL":
             # Single-agent's obs:
             eIx, eIb1 = obs_n[0][18:21], obs_n[0][21]
             R_vec = self.R.reshape(9, 1, order='F').flatten()
-            obs = np.concatenate((ex_norm, ev_norm, R_vec, eW_norm, eIx, eIb1), axis=None)
+            obs = np.concatenate((ex_norm, ev_norm, R_vec, eW_norm, eIx, eb1, eIb1), axis=None)
             error_obs_n = [obs]
         
         return error_obs_n

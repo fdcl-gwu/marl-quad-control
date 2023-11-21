@@ -28,20 +28,20 @@ class Learner:
             """--------------------------------------------------------------------------------------------------
             | Agents  | Observations           | obs_dim | Actions:       | act_dim | Rewards                   |
             | #agent1 | {ex, ev, b3, w12, eIx} | 15      | {f_total, tau} | 4       | f(ex, ev, eb3, ew12, eIx) |
-            | #agent2 | {b1, W3, eIb1}         | 5       | {M3}           | 1       | f(eb1, eW3, eIb1)         |
+            | #agent2 | {b1, W3, eb1, eIb1}    | 6       | {M3}           | 1       | f(eb1, eW3, eb1, eIb1)    |
             --------------------------------------------------------------------------------------------------"""
             self.env = DecoupledWrapper()
             self.args.N = 2 # The number of agents
-            self.args.obs_dim_n = [15, 5]   
+            self.args.obs_dim_n = [15, 6]   
             self.args.action_dim_n = [4, 1] 
         elif self.framework == "SARL":
-            """--------------------------------------------------------------------------------------------------------------
-            | Agents  | Observations               | obs_dim | Actions:      | act_dim | Rewards                            |
-            | #agent1 | {ex, ev, R, eW, eIx, eIb1} | 22      | {T1,T2,T3,T4} | 4       | f(ex, ev, eb1, eb3, eW, eIx, eIb1) |
-            ---------------------------------------------------------------------------------------------------------------"""
+            """------------------------------------------------------------------------------------------------------------------
+            | Agents  | Observations                    | obs_dim | Actions:     | act_dim | Rewards                            |
+            | #agent1 | {ex, ev, R, eW, eIx, eb1, eIb1} | 23      | {f_total, M} | 4       | f(ex, ev, eb1, eb3, eW, eIx, eIb1) |
+            ------------------------------------------------------------------------------------------------------------------"""
             self.env = CoupledWrapper()
             self.args.N = 1 # The number of agents
-            self.args.obs_dim_n = [22]
+            self.args.obs_dim_n = [23]
             self.args.action_dim_n = [4] 
         self.eval_max_steps = self.args.eval_max_steps/self.env.dt 
         self.trajectory = TrajectoryGeneration(self.env)
@@ -182,29 +182,10 @@ class Learner:
 
 
     def eval_policy(self):
-        # Set mode for generating trajectory:
-        mode = 5
-        """ Mode List -----------------------------------------------
-        0 or 1: idle and warm-up (approach to xd = [0,0,0])
-        2: take-off
-        3: landing
-        4: stay (hovering)
-        5: circle
-        ----------------------------------------------------------"""
-
         # Make OpenAI Gym environment:
         if self.framework in ("DTDE", "CTDE"):
-            """--------------------------------------------------------------------------------------------------
-            | Agents  | Observations           | obs_dim | Actions:       | act_dim | Rewards                   |
-            | #agent1 | {ex, ev, b3, w12, eIx} | 15      | {f_total, tau} | 4       | f(ex, ev, eb3, ew12, eIx) |
-            | #agent2 | {b1, W3, eIb1}         | 5       | {M3}           | 1       | f(eb1, eW3, eIb1)         |
-            --------------------------------------------------------------------------------------------------"""
             eval_env = DecoupledWrapper()
         elif self.framework == "SARL":
-            """--------------------------------------------------------------------------------------------------------------
-            | Agents  | Observations               | obs_dim | Actions:      | act_dim | Rewards                            |
-            | #agent1 | {ex, ev, R, eW, eIx, eIb1} | 22      | {T1,T2,T3,T4} | 4       | f(ex, ev, eb1, eb3, eW, eIx, eIb1) |
-            ---------------------------------------------------------------------------------------------------------------"""
             eval_env = CoupledWrapper()
 
         # Fixed seed is used for the eval environment.
@@ -223,6 +204,17 @@ class Learner:
 
         print("---------------------------------------------------------------------------------------------------------------------")
         for num_eval in range(self.args.num_eval):
+            # Set mode for generating trajectory:
+            mode = 5
+            """ Mode List -----------------------------------------------
+            0 or 1: idle and warm-up (approach to xd = [0,0,0])
+            2: take-off
+            3: landing
+            4: stay (hovering)
+            5: circle
+            ----------------------------------------------------------"""
+            self.trajectory.mark_traj_start() # reset trajectory
+
             # Data save:
             act_list, obs_list, cmd_list = [], [], [] if args.save_log else None
 
@@ -246,7 +238,6 @@ class Learner:
 
                 # Actions w/o exploration noise:
                 act_n = [agent.choose_action(obs, explor_noise_std=0) for agent, obs in zip(self.agent_n, error_obs_n)] # obs_n
-                # act_n = [agent.choose_action(obs, explor_noise_std=0) for agent, obs in zip(self.agent_n, obs_n)]
                 action = np.concatenate((act_n), axis=None)
 
                 # Perform actions:
