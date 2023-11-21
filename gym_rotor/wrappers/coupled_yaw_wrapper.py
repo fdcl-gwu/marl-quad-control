@@ -53,6 +53,18 @@ class CoupledWrapper(QuadEnv):
         return [obs]
 
 
+    def action_wrapper(self, action):
+        # Linear scale, [-1, 1] -> [min_act, max_act] 
+        f_total = (
+            4 * (self.scale_act * action[0] + self.avrg_act)
+            ).clip(4*self.min_force, 4*self.max_force)
+
+        self.f   = f_total # [N]
+        self.M = action[1:4] # [Nm]
+        
+        return action
+
+
     def observation_wrapper(self, state):
         # De-normalization: [-1, 1] -> [max, min]
         x, v, R, W = state_de_normalization(state, self.x_lim, self.v_lim, self.W_lim)
