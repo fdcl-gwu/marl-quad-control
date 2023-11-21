@@ -37,10 +37,6 @@ class CoupledWrapper(QuadEnv):
         # super().reset(seed=seed)
         QuadEnv.reset(self, env_type)
 
-        # Reset forces & moments:
-        self.fM = np.zeros((4, 1)) # Force-moment vector
-        self.M3 = 0. # [Nm]
-
         # Reset errors:
         self.ex, self.ev = np.zeros(3), np.zeros(3)
         self.eb1, self.eb3 = 0., 0.
@@ -74,8 +70,8 @@ class CoupledWrapper(QuadEnv):
         # Update integral terms:
         x, v, R, _ = state_decomposition(self.state) 
         b1, b3 = R@self.e1, R@self.e3
-        self.ex = x - self.xd     # position error
-        self.ev = v - self.xd_dot # velocity error
+        self.ex = x - self.xd # position error
+        self.ev = v - self.vd # velocity error
 
         self.eIX.integrate(-self.alpha*self.eIX.error*self.eIx_lim + x_norm*self.x_lim, self.dt) 
         self.eIx = clip(self.eIX.error, -self.sat_sigma, self.sat_sigma)/self.eIx_lim

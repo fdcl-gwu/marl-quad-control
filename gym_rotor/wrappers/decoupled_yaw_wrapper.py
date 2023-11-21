@@ -105,8 +105,8 @@ class DecoupledWrapper(QuadEnv):
 
         # Update integral terms:
         x, v, b3, _, _ = decoupled_obs1_decomposition(self.state, self.eIx) # Agent1's obs
-        self.ex = x - self.xd     # position error
-        self.ev = v - self.xd_dot # velocity error
+        self.ex = x - self.xd # position error
+        self.ev = v - self.vd # velocity error
         self.eIX.integrate(-self.alpha*self.eIX.error + x_norm*self.x_lim, self.dt) 
         self.eIx = clip(self.eIX.error/self.eIx_lim, -self.sat_sigma, self.sat_sigma)
 

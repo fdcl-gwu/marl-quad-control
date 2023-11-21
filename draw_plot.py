@@ -2,6 +2,7 @@
 import os
 import gymnasium as gym
 from gym_rotor.wrappers.decoupled_yaw_wrapper import DecoupledWrapper
+from gym_rotor.wrappers.coupled_yaw_wrapper import CoupledWrapper
 import gym_rotor
 import args_parse
 import numpy as np
@@ -15,7 +16,7 @@ plt.rcParams['font.size'] = 18
 fontsize = 25
 
 # Data load and indexing:
-file_name = 'log_10272023_145913'
+file_name = 'log_11212023_121005'
 log_date = np.loadtxt(os.path.join('./results', file_name + '.dat')) 
 start_index = 3
 end_index = len(log_date)
@@ -25,19 +26,21 @@ is_SAVE = True
 parser = args_parse.create_parser()
 args = parser.parse_args()
 if args.framework_id in ("DTDE", "CTDE"):
-	env = DecoupledWrapper()
+    env = DecoupledWrapper()
+    load_act  = log_date[:, 0:5] # automatically discards the headers
+    load_obs  = log_date[:, 5:26] 
+    load_cmd  = log_date[:, 26:] 
 elif args.framework_id == "SARL":
-    env = gym.make('Quad-v0')
-t = np.arange(end_index - start_index)*env.dt # time [sec]
-
-load_act  = log_date[:, 0:5] # automatically discards the headers
-load_obs  = log_date[:, 5:23+3] 
-load_cmd  = log_date[:, 23+3:] 
+    env = CoupledWrapper()
+    load_act  = log_date[:, 0:4] # automatically discards the headers
+    load_obs  = log_date[:, 4:25] 
+    load_cmd  = log_date[:, 25:] 
 act = load_act[start_index-2: end_index-2]
 obs = load_obs[start_index-2: end_index-2]
 cmd = load_cmd[start_index-2: end_index-2]
+t = np.arange(end_index - start_index)*env.dt # sim time [sec]
 
-# States
+# States:
 x1, x2, x3 = obs[:, 0]*env.x_lim, obs[:, 1]*env.x_lim, obs[:, 2]*env.x_lim
 v1, v2, v3 = obs[:, 3]*env.v_lim, obs[:, 4]*env.v_lim, obs[:, 5]*env.v_lim
 R11, R21, R31 = obs[:, 6],  obs[:, 7],  obs[:, 8] 
@@ -46,14 +49,13 @@ R13, R23, R33 = obs[:, 12], obs[:, 13], obs[:, 14]
 W1, W2, W3 = obs[:, 15]*env.W_lim, obs[:, 16]*env.W_lim, obs[:, 17]*env.W_lim
 eIx1, eIx2, eIx3 = obs[:, 18]*env.eIx_lim, obs[:, 19]*env.eIx_lim, obs[:, 20]*env.eIx_lim
 
-# Actions
+# Actions:
+fM = np.zeros((4, act.shape[0])) # Force-moment vector
+f_total = (
+        4 * (env.scale_act * act[:, 0] + env.avrg_act)
+        ).clip(4*env.min_force, 4*env.max_force)
 if args.framework_id in ("DTDE", "CTDE"):
-    fM = np.zeros((4, act.shape[0])) # Force-moment vector
-    f_total = (
-            4 * (env.scale_act * act[:, 0] + env.avrg_act)
-            ).clip(4*env.min_force, 4*env.max_force)
     tau = act[:, 1:4]
-
     b1, b2 = obs[:, 6:9], obs[:, 9:12]
     fM[0] = f_total
     fM[1] = np.einsum('ij,ij->i', b1, tau) + env.J[2,2]*W3*W2 # M2
@@ -64,10 +66,16 @@ if args.framework_id in ("DTDE", "CTDE"):
     forces = (env.fM_to_forces @ fM).clip(env.min_force, env.max_force)
     f1, f2, f3, f4 = forces[0], forces[1], forces[2], forces[3]
 elif args.framework_id == "SARL":
-    act = env.scale_act * act + env.avrg_act # scaling
-    f1, f2, f3, f4 = act[:, 0], act[:, 1], act[:, 2], act[:, 3]
+    fM[0] = f_total
+    fM[1] = act[:, 1] # M2
+    fM[2] = act[:, 2] # M3
+    fM[3] = act[:, 3]
+	
+    # FM matrix to thrust of each motor:
+    forces = (env.fM_to_forces @ fM).clip(env.min_force, env.max_force)
+    f1, f2, f3, f4 = forces[0], forces[1], forces[2], forces[3]
 
-# Commands
+# Commands:
 xd1, xd2, xd3 = cmd[:, 0]*env.x_lim, cmd[:, 1]*env.x_lim, cmd[:, 2]*env.x_lim
 vd1, vd2, vd3 = cmd[:, 3]*env.v_lim, cmd[:, 4]*env.v_lim, cmd[:, 5]*env.v_lim
 b1d1, b1d2, b1d3 = cmd[:, 6], cmd[:, 7], cmd[:, 8]
@@ -103,7 +111,7 @@ for label in (axs[2].get_xticklabels() + axs[2].get_yticklabels()):
 	label.set_fontsize(fontsize)
 for label in (axs[3].get_xticklabels() + axs[3].get_yticklabels()):
 	label.set_fontsize(fontsize)
-if is_SAVE and args.framework_id in ("DTDE", "CTDE"):
+if is_SAVE:
     plt.savefig(os.path.join('./results', file_name[4:]+'_fM'+'.png'), bbox_inches='tight')
 
 #######################################################################

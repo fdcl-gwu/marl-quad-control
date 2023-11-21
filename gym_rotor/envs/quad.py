@@ -69,7 +69,7 @@ class QuadEnv(gym.Env):
 
         # Coefficients in reward function:
         self.framework_id = args.framework_id
-        self.reward_alive = 0. # β ≥ 0 is a bonus value earned by the agent for staying alive
+        self.reward_alive = 0.  # ≥ 0 is a bonus value earned by the agent for staying alive
         self.reward_crash = -1. # Out of boundry or crashed!
         if self.framework_id in ("DTDE", "CTDE"):
             # Agent1's reward:
@@ -103,10 +103,10 @@ class QuadEnv(gym.Env):
         self.eIR.set_zero()
 
         # Commands:
-        self.xd     = np.array([0.,0.,0.]) # desired tracking position command, [m] 
-        self.xd_dot = np.array([0.,0.,0.]) # [m/s]
-        self.b1d    = np.array([1.,0.,0.]) # desired heading direction        
-        self.Rd     = np.eye(3)
+        self.xd  = np.array([0.,0.,0.]) # desired tracking position command, [m] 
+        self.vd  = np.array([0.,0.,0.]) # [m/s]
+        self.b1d = np.array([1.,0.,0.]) # desired heading direction        
+        self.Rd  = np.eye(3)
 
         # Limits of states:
         self.x_lim = 3.0 # [m]
@@ -171,8 +171,7 @@ class QuadEnv(gym.Env):
             if done[1]: # Out of boundry or crashed!
                 reward[1] = self.reward_crash
 
-        #return obs, reward, done, False, {}
-        return obs, reward, done, self.state, {}
+        return obs, reward, done, False, {}
 
 
     def reset(self, env_type='train',
@@ -291,8 +290,8 @@ class QuadEnv(gym.Env):
         CW = self.CW # ang_vel coef.
 
         # Errors:
-        eX = x - self.xd     # position error
-        eV = v - self.xd_dot # velocity error
+        eX = x - self.xd # position error
+        eV = v - self.vd # velocity error
         # Heading errors:
         eb1 = ang_btw_two_vectors(get_current_b1(R), self.b1d) # [rad]
         # Attitude errors:
@@ -416,6 +415,14 @@ class QuadEnv(gym.Env):
         # print('m:',f'{self.m:.3f}','d:',f'{self.d:.3f}','J:',f'{J1:.4f}',f'{J3:.4f}','c_tf:',f'{self.c_tf:.4f}','c_tw:',f'{self.c_tw:.3f}')
         
 
+    def get_current_state(self):
+        return self.state
+
+
+    def set_goal_pos(self, xd_vis):
+        self.xd_vis = xd_vis*self.x_lim
+
+
     def render(self, mode='human', close=False):
         from vpython import canvas, vector, box, sphere, color, rate, cylinder, arrow, ring, scene, textures
 
@@ -423,11 +430,11 @@ class QuadEnv(gym.Env):
         state_vis = np.copy(self.state)
 
         # De-normalization state vectors
-        x, v, R, W = state_de_normalization(state_vis, self.x_lim, self.v_lim, self.W_lim)
+        x, _, _, _ = state_de_normalization(state_vis, self.x_lim, self.v_lim, self.W_lim)
 
         # Quadrotor and goal positions:
         quad_pos = x # [m]
-        cmd_pos  = self.xd # [m]
+        cmd_pos  = self.xd_vis # [m]
 
         # Axis:
         x_axis = np.array([state_vis[6], state_vis[7], state_vis[8]])
@@ -480,7 +487,7 @@ class QuadEnv(gym.Env):
             # Commands.
             self.render_ref = sphere(canvas=self.viewer, pos=vector(cmd_pos[0], cmd_pos[1], cmd_pos[2]), \
                                      radius=0.07, color=color.red, \
-                                     make_trail=True, trail_type='points', interval=50)									
+                                     make_trail=True, trail_type='points', interval=10)									
             
             # Inertial axis.				
             self.e1_axis = arrow(pos=vector(2.5, -2.5, 0), axis=0.5*vector(1, 0, 0), \
@@ -495,8 +502,8 @@ class QuadEnv(gym.Env):
                                         pos=vector(quad_pos[0], quad_pos[1], quad_pos[2]), \
                                         axis=vector(x_axis[0], x_axis[1], x_axis[2]), \
                                         shaftwidth=0.02, color=color.blue, \
-                                        make_trail=True, retain=60, interval=10, \
-                                        trail_type='points', trail_radius=0.03, trail_color=color.yellow)
+                                        make_trail=True, retain=70, interval=10, \
+                                        trail_type='points', trail_radius=0.02, trail_color=color.yellow)
             self.render_b2_axis = arrow(canvas=self.viewer, 
                                         pos=vector(quad_pos[0], quad_pos[1], quad_pos[2]), \
                                         axis=vector(y_axis[0], y_axis[1], y_axis[2]), \
