@@ -285,7 +285,7 @@ class Learner:
                 header = "Actions and States\n"
                 header += "action[0], ..., state[0], ..., command[0], ..." 
                 time_now = datetime.now().strftime("%m%d%Y_%H%M%S") 
-                fpath = os.path.join('./results', 'log_' + time_now + '.dat')
+                fpath = os.path.join('./results', self.framework+'_log_'+time_now+'.dat')
                 np.savetxt(fpath, log_data, header=header, fmt='%.10f') 
             sys.exit("The trained agent has been test!") if args.test_model == True else None
 

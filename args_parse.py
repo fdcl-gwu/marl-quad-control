@@ -10,7 +10,7 @@ def create_parser():
     parser.add_argument('--render', default=False, type=bool, help='Simulation visualization (default: False)')
 
     # args of environment:
-    parser.add_argument('--framework_id', default="CTDE", help='Name of framework: SARL, DTDE, or CTDE ')
+    parser.add_argument('--framework_id', default="SARL", help='Name of framework: SARL, DTDE, or CTDE ')
     parser.add_argument('--max_steps', default=5000, type=int, help='Maximum number of steps in each episode (default: 2000)')
     parser.add_argument('--max_timesteps', default=int(5e6), type=int, help='Number of total timesteps (default: 7e6)')
     parser.add_argument("--num_eval", type=float, default=5, help="Number of episodes to evaluate our trained model")

@@ -1,6 +1,7 @@
 ## Importing Libraries
 import os
 import gymnasium as gym
+from gym_rotor.envs.quad_utils import *
 from gym_rotor.wrappers.decoupled_yaw_wrapper import DecoupledWrapper
 from gym_rotor.wrappers.coupled_yaw_wrapper import CoupledWrapper
 import gym_rotor
@@ -81,6 +82,7 @@ vd1, vd2, vd3 = cmd[:, 3]*env.v_lim, cmd[:, 4]*env.v_lim, cmd[:, 5]*env.v_lim
 b1d1, b1d2, b1d3 = cmd[:, 6], cmd[:, 7], cmd[:, 8]
 b3d1, b3d2, b3d3 = cmd[:, 9], cmd[:, 10], cmd[:, 11]
 Wd1, Wd2, Wd3 = cmd[:, 12]*env.W_lim, cmd[:, 13]*env.W_lim, cmd[:, 14]*env.W_lim
+Rd = np.eye(3) # arbitrary desired attitude
 
 #######################################################################
 ############################ Plot f and M #############################
@@ -319,60 +321,39 @@ if is_SAVE:
 ######################### Plot eX, eIX and eR ############################
 ##########################################################################
 def vee(M):
-    '''Returns the vee map of a given 3x3 matrix.
-    Args:
-        x: (3x3 numpy array) hat of the input vector
-    Returns:
-        (3x1 numpy array) vee map of the input matrix
-    '''
     vee_M = np.array([M[2,1], M[0,2], M[1,0]])
-
     return vee_M
 
-eR = np.zeros((t.size, 3))
+eb1 = np.zeros((t.size)) # yaw error
+eR = np.zeros((t.size, 3))  # attitude errors
 for i in range(t.size):
     R_vec = np.array([[obs[i, 6],   obs[i, 7],  obs[i, 8]],
                       [obs[i, 9],   obs[i, 10], obs[i, 11]],
                       [obs[i, 12],  obs[i, 13], obs[i, 14]]])
     R = R_vec.reshape(3, 3, order='F')
-    Rd = np.eye(3)
-    Rd_T = Rd.T
-    RdtR = Rd_T@R
-    eR[i] = 0.5*vee(RdtR - RdtR.T) # attitude error vector
+    b1 = R @ np.array([1.,0.,0.])
+    b2 = R @ np.array([0.,1.,0.])
+    b3 = R @ np.array([0.,0.,1.])
+    b1d = cmd[i, 6:9]
+    b1c = -(hat(b3) @ hat(b3)) @ b1d # desired b1 
+    eb1[i] = ang_btw_two_vectors(b1, b1c) # b1 error, [rad]
+    eR[i] = 0.5*vee(Rd.T@R - Rd.T@R.T) # attitude error vector
 
-"""
-class IntegralErrorVec3:
-    def __init__(self,):
-        self.error = np.zeros(3)
-        self.integrand = np.zeros(3)
-
-    def integrate(self, current_integrand, dt):
-        self.error += (self.integrand + current_integrand) * dt / 2.0
-        self.integrand = current_integrand
-
-    def set_zero(self):
-        self.error = np.zeros(3)
-        self.integrand = np.zeros(3)
-	
-sat_sigma = 3.
-eIX = IntegralErrorVec3() # Position integral error
-eIX.set_zero() # Set all integrals to zero
-eIX_vec = np.zeros((t.size, 3))
-for i in range(t.size):
-    eX = np.array([(x1 - xd1)[i], (x2 - xd2)[i], (x3 - xd3)[i]])
-    eIX.integrate(-env.alpha*eIX.error + eX, env.dt)
-    eIX.error = clip(eIX.error, -sat_sigma, sat_sigma)
-    eIX_vec[i] = eIX.error
-"""
+# Position and Yaw errors:
+eX1, eX2, eX3 = x1 - xd1, x2 - xd2, x3 - xd3
+print('=============================================')
+print(f"avg_eX1 [m]: {sum(abs(eX1))/eX1.size:.2f}, avg_eX2 [m]: {sum(abs(eX2))/eX2.size:.2f}")
+print(f"avg_eX3 [m]: {sum(abs(eX3))/eX3.size:.2f}, avg_yaw [rad]: {sum(abs(eb1))/eb1.size:.2f}")
+print('=============================================')
 
 fig, axs = plt.subplots(3, 3, figsize=(30, 12))
-axs[0, 0].plot(t, x1 - xd1, linewidth=3, label='$e_{x_1}$')
+axs[0, 0].plot(t, eX1, linewidth=3, label='$e_{x_1}$')
 axs[0, 0].set_ylabel('$e_{x_1}$ [m]', size=fontsize)
 
-axs[0, 1].plot(t, x2 - xd2, linewidth=3, label='$e_{x_2}$')
+axs[0, 1].plot(t, eX2, linewidth=3, label='$e_{x_2}$')
 axs[0, 1].set_ylabel('$e_{x_2}$ [m]', size=fontsize)
 
-axs[0, 2].plot(t, x3 - xd3, linewidth=3, label='$e_{x_3}$')
+axs[0, 2].plot(t, eX3, linewidth=3, label='$e_{x_3}$')
 axs[0, 2].set_ylabel('$e_{x_3}$ [m]', size=fontsize)
 
 axs[1, 0].plot(t, eIx1, linewidth=3, label='$eI_{x_1}$')
