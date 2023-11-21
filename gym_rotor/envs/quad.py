@@ -1,5 +1,4 @@
 import numpy as np
-from numpy import clip 
 from numpy import interp
 from numpy.linalg import norm
 from numpy.linalg import inv
@@ -71,29 +70,22 @@ class QuadEnv(gym.Env):
         self.framework_id = args.framework_id
         self.reward_alive = 0.  # ≥ 0 is a bonus value earned by the agent for staying alive
         self.reward_crash = -1. # Out of boundry or crashed!
+        self.Cx  = args.Cx
+        self.CIx = args.CIx
+        self.Cv  = args.Cv
+        self.Cb1  = args.Cb1
+        self.CIb1 = args.CIb1
+        self.Cb3  = args.Cb3
+        self.CW = args.Cw12
+        self.reward_min = -np.ceil(self.Cx+self.CIx+self.Cv+self.Cb1+self.CIb1+self.Cb3+self.CW)
         if self.framework_id in ("DTDE", "CTDE"):
             # Agent1's reward:
-            self.Cx   = args.Cx
-            self.CIx  = args.CIx
-            self.Cv   = args.Cv
-            self.Cb3  = args.Cb3
             self.Cw12 = args.Cw12
             self.reward_min_1 = -np.ceil(self.Cx+self.CIx+self.Cv+self.Cb3+self.Cw12)
             # Agent2's reward:
-            self.Cb1 = args.Cb1
             self.CW3 = args.CW3
-            self.CIb1 = args.CIb1
             self.reward_min_2 = -np.ceil(self.Cb1+self.CW3+self.CIb1)
-        elif self.framework_id == "SARL":
-            self.Cx  = args.Cx
-            self.CIx = args.CIx
-            self.Cv  = args.Cv
-            self.Cb1  = args.Cb1
-            self.CIb1 = args.CIb1
-            self.Cb3  = args.Cb3
-            self.CW = args.Cw12
-            self.reward_min = -np.ceil(self.Cx+self.CIx+self.Cv+self.Cb1+self.CIb1+self.Cb3+self.CW)
-
+        
         # Integral terms:
         self.use_integral = True
         self.sat_sigma = 1.

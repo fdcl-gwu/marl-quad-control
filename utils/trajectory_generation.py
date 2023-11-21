@@ -333,5 +333,6 @@ class TrajectoryGeneration:
             R_vec = self.R.reshape(9, 1, order='F').flatten()
             obs = np.concatenate((ex_norm, ev_norm, R_vec, eW_norm, eIx, eb1, eIb1), axis=None)
             error_obs_n = [obs]
+        error_state = (ex_norm, eIx, ev_norm, eb1, eIb1, eW_norm)
         
-        return error_obs_n
+        return error_obs_n, error_state

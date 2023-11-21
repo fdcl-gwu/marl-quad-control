@@ -9,10 +9,11 @@ from numpy import random
 from gym_rotor.envs.quad_utils import *
 from gym_rotor.wrappers.decoupled_yaw_wrapper import DecoupledWrapper
 from gym_rotor.wrappers.coupled_yaw_wrapper import CoupledWrapper
-from trajectory_generation import TrajectoryGeneration
+from utils.trajectory_generation import TrajectoryGeneration
 from algos.replay_buffer import ReplayBuffer
 from algos.matd3 import MATD3
 from algos.td3 import TD3
+from utils.utils import *
 
 # Create directories:    
 os.makedirs("./models") if not os.path.exists("./models") else None 
@@ -127,7 +128,6 @@ class Learner:
             self.replay_buffer.store_transition(obs_n, act_n, r_n, obs_next_n, done_n)
             obs_n = obs_next_n
             episode_reward = [float('{:.4f}'.format(episode_reward[agent_id]+r)) for agent_id, r in zip(range(self.args.N), r_n)]
-            #episode_reward += sum(r_n)/self.args.N
             self.total_timesteps += 1
 
             # Decay explor_noise_std:
@@ -142,13 +142,13 @@ class Learner:
 
             # Evaluate policy:
             if self.total_timesteps % self.args.eval_freq == 0 and self.total_timesteps > self.args.start_timesteps:
-                eval_reward = self.eval_policy()
+                eval_reward, benchmark_reward = self.eval_policy()
 
                 # Logging updates:
                 if self.framework in ("DTDE", "CTDE"):
-                    log_eval.write('{}\t {}\n'.format(self.total_timesteps, eval_reward))
+                    log_eval.write('{}\t {}\t {}\n'.format(self.total_timesteps, benchmark_reward, eval_reward))
                 elif self.framework == "SARL":
-                    log_eval.write('{}\t {}\n'.format(self.total_timesteps, eval_reward))
+                    log_eval.write('{}\t {}\t {}\n'.format(self.total_timesteps, benchmark_reward, eval_reward))
                 log_eval.flush()
 
                 # Save best model:
@@ -195,12 +195,13 @@ class Learner:
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-        # Save solved model:
+        # Save rewards and models:
         success_count = []
         if self.framework in ("DTDE", "CTDE"):
             success, eval_reward = [False,False], [0.,0.]
         elif self.framework == "SARL":
             success, eval_reward = [False], [0.]
+        benchmark_reward = 0. # Reward for benchmark
 
         print("---------------------------------------------------------------------------------------------------------------------")
         for num_eval in range(self.args.num_eval):
@@ -225,6 +226,7 @@ class Learner:
                 episode_reward = [0.,0.]
             elif self.framework == "SARL":
                 episode_reward = [0.]
+            episode_benchmark_reward = 0.
 
             # Evaluation loop:
             for _ in range(int(self.eval_max_steps)):
@@ -234,10 +236,10 @@ class Learner:
                 state = eval_env.get_current_state()
                 xd, vd, b1d, b3d, Wd = self.trajectory.get_desired(state, mode)
                 eval_env.set_goal_pos(xd)
-                error_obs_n = self.trajectory.get_error_state(obs_n, self.framework)
+                error_obs_n, error_state = self.trajectory.get_error_state(obs_n, self.framework)
 
                 # Actions w/o exploration noise:
-                act_n = [agent.choose_action(obs, explor_noise_std=0) for agent, obs in zip(self.agent_n, error_obs_n)] # obs_n
+                act_n = [agent.choose_action(obs, explor_noise_std=0.) for agent, obs in zip(self.agent_n, error_obs_n)] # obs_n
                 action = np.concatenate((act_n), axis=None)
 
                 # Perform actions:
@@ -247,6 +249,7 @@ class Learner:
 
                 # Cumulative rewards:
                 episode_reward = [float('{:.4f}'.format(episode_reward[agent_id]+r)) for agent_id, r in zip(range(self.args.N), r_n)]
+                episode_benchmark_reward += benchmark_reward_func(error_state, eval_env.reward_min, args)
                 obs_n = obs_next_n
 
                 # Save data:
@@ -269,11 +272,12 @@ class Learner:
                     elif self.framework == "SARL":
                         eb1 = ang_btw_two_vectors(obs_next_n[0][6:9], b1d) # heading error [rad]
                         success[0] = True if (abs(eX) <= 0.05).all() else False
-                    print(f"eval_iter: {num_eval+1}, time_stpes: {episode_timesteps}, episode_reward: {episode_reward}, eX: {eX}, eb1: {eb1:.3f}")
+                    print(f"eval_iter: {num_eval+1}, time_stpes: {episode_timesteps}, episode_reward: {episode_reward}, episode_benchmark_reward: {episode_benchmark_reward:.3f}, eX: {eX}, eb1: {eb1:.3f}")
                     success_count.append(success)
                     break
 
             eval_reward = [eval_reward[agent_id]+epi_r for agent_id, epi_r in zip(range(self.args.N), episode_reward)]
+            benchmark_reward += episode_benchmark_reward
             # Save data:
             if args.save_log:
                 min_len = min(len(act_list), len(obs_list), len(cmd_list))
@@ -287,16 +291,17 @@ class Learner:
 
         # Average reward:
         eval_reward = [float('{:.4f}'.format(eval_r/self.args.num_eval)) for eval_r in eval_reward]
-        print("------------------------------------------------------------------------------------------")
-        print(f"total_timesteps: {self.total_timesteps} \t eval_reward: {eval_reward} \t explor_noise_std: {self.explor_noise_std}")
-        print("------------------------------------------------------------------------------------------")
+        benchmark_reward = float('{:.4f}'.format(benchmark_reward/self.args.num_eval))
+        print("--------------------------------------------------------------------------------------------------------------------------------")
+        print(f"total_timesteps: {self.total_timesteps} \t eval_reward: {eval_reward} \t benchmark_reward: {benchmark_reward} \t explor_noise_std: {self.explor_noise_std}")
+        print("--------------------------------------------------------------------------------------------------------------------------------")
 
         # Save solved model:
         for agent_id in range(self.args.N): 
             if all(i[agent_id] == True for i in success_count) and args.save_model == True: # Problem is solved
                 self.agent_n[agent_id].save_solved_model(self.framework, self.total_timesteps, agent_id, self.seed)
 
-        return eval_reward
+        return eval_reward, benchmark_reward
         
         
 if __name__ == '__main__':

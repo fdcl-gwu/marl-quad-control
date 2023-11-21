@@ -1,8 +1,6 @@
-import sys
 import numpy as np
 from numpy.linalg import inv
 from numpy.linalg import norm
-from numpy.random import uniform 
 from scipy.integrate import odeint, solve_ivp
 
 from gym_rotor.envs.quad import QuadEnv
