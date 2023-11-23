@@ -20,9 +20,6 @@ class DecoupledWrapper(QuadEnv):
         args = parser.parse_args()
         self.alpha = args.alpha # addressing noise or delay
 
-        # Yaw angle error: 
-        self.eb1 = 0. # angle between b1 and b1c[0, pi)
-
         # b3d commands:
         self.b3d = np.array([0.,0.,1])
 
@@ -44,7 +41,12 @@ class DecoupledWrapper(QuadEnv):
 
         # Reset errors:
         self.ex, self.ev = np.zeros(3), np.zeros(3)
-        self.eb1, self.eb3 = 0., 0.
+        _, _, R, _ = state_decomposition(self.state) # decomposing state vectors
+        b1 = R @ np.array([1.,0.,0.])
+        b3 = R @ np.array([0.,0.,1.])
+        b1c = -(hat(b3) @ hat(b3)) @ self.b1d # desired b1 
+        self.eb1 = ang_btw_two_vectors(b1, b1c)/np.pi # b1 error, [0,pi) ->[0,1]
+        self.eb3 = ang_btw_two_vectors(b3, self.b3d)/np.pi # [0,pi) ->[0,1]
 
         # Reset integral terms:
         self.eIx  = np.zeros(3)

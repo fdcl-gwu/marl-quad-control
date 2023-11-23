@@ -299,9 +299,9 @@ class TrajectoryGeneration:
             self.vd[1] = circle_radius * circle_W * np.cos(th)
 
             # yaw-axis:
-            w_b1d = 2.0 * np.pi / 10.0
+            w_b1d = 0.5 * np.pi / 10.0
             th_b1d = w_b1d * t
-            self.b1d = np.array([1.,0.,0.]) #TODO: np.array([np.cos(th_b1d), np.sin(th_b1d), 0])
+            self.b1d = np.array([np.cos(th_b1d), np.sin(th_b1d), 0]) #TODO: np.array([1.,0.,0.])
         else:
             self.mark_traj_end(True)
             
@@ -324,7 +324,7 @@ class TrajectoryGeneration:
             ew12 = eW_norm[0]*b1 + eW_norm[1]*b2
             obs_1 = np.concatenate((ex_norm, ev_norm, b3, ew12, eIx), axis=None)
             # Agent2's obs:
-            eW3_norm, eIb1 = eW_norm[2], obs_n[1][4]
+            eW3_norm, eIb1 = eW_norm[2], obs_n[1][5]
             obs_2 = np.concatenate((b1, eW3_norm, eb1, eIb1), axis=None)
             error_obs_n = [obs_1, obs_2]
         elif framework == "SARL":
