@@ -10,7 +10,7 @@ def create_parser():
     parser.add_argument('--render', default=False, type=bool, help='Simulation visualization (default: False)')
 
     # args of environment:
-    parser.add_argument('--framework_id', default="CTDE", help='Name of framework: SARL, DTDE, or CTDE ')
+    parser.add_argument('--framework_id', default="SARL", help='Name of framework: SARL, DTDE, or CTDE ')
     parser.add_argument('--max_steps', default=5000, type=int, help='Maximum number of steps in each episode (default: 2000)')
     parser.add_argument('--max_timesteps', default=int(5e6), type=int, help='Number of total timesteps (default: 7e6)')
     parser.add_argument("--num_eval", type=float, default=5, help="Number of episodes to evaluate our trained model")
@@ -19,7 +19,7 @@ def create_parser():
     # Coefficients in reward function:
     # Agent1's reward:
     parser.add_argument('--Cx', default=7.0, type=float, metavar='G', help='Position coeff. (default: )')
-    parser.add_argument('--CIx', default=0.04, type=float, metavar='G', help='Position integral coeff. (default: )')
+    parser.add_argument('--CIx', default=0.2, type=float, metavar='G', help='Position integral coeff. (default: )')
     parser.add_argument('--Cv', default=0.25, type=float, metavar='G', help='Velocity coeff. (default: )')
     parser.add_argument('--Cb3', default=3.5, type=float, metavar='G', help='Attitude coeff. (default: )')
     parser.add_argument('--Cw12', default=0.25, type=float, metavar='G', help='Angular velocity coeff. (default: )')
@@ -27,7 +27,7 @@ def create_parser():
     # Agent2's reward:
     parser.add_argument('--Cb1', default=2.0, type=float, metavar='G', help='Attitude coeff. (default: )')
     parser.add_argument('--CW3', default=0.2, type=float, metavar='G', help='Angular velocity coeff. (default: )')
-    parser.add_argument('--CIb1', default=0.06, type=float, metavar='G', help='Attitude integral coeff. (default: )')
+    parser.add_argument('--CIb1', default=0.1, type=float, metavar='G', help='Attitude integral coeff. (default: )')
     # Domain randomization: 
     parser.add_argument("--use_UDM", default=True, type=bool, help="Uniform domain randomization for sim-to-real")
     parser.add_argument("--UDM_percentage", default=10, type=float, help="± randomness 0 ~ 100[%]")

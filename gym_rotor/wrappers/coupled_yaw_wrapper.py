@@ -86,15 +86,14 @@ class CoupledWrapper(QuadEnv):
         b1, b3 = R@self.e1, R@self.e3
         self.ex = x - self.xd # position error
         self.ev = v - self.vd # velocity error
-
-        self.eIX.integrate(-self.alpha*self.eIX.error*self.eIx_lim + x_norm*self.x_lim, self.dt) 
-        self.eIx = clip(self.eIX.error, -self.sat_sigma, self.sat_sigma)/self.eIx_lim
+        self.eIX.integrate(-self.alpha*self.eIX.error + x_norm*self.x_lim, self.dt) 
+        self.eIx = clip(self.eIX.error/self.eIx_lim, -self.sat_sigma, self.sat_sigma)
 
         b1c = -(hat(b3) @ hat(b3)) @ self.b1d # desired b1 
         self.eb1 = ang_btw_two_vectors(b1, b1c)/np.pi # b1 error, [0,pi) ->[0,1]
         self.eb3 = ang_btw_two_vectors(b3, self.b3d)/np.pi # [0,pi) ->[0,1]
         self.eIR.integrate(self.eb1*np.pi, self.dt) # b1 integral error
-        self.eIb1 = clip(self.eIR.error, -self.sat_sigma, self.sat_sigma)/self.eIb1_lim
+        self.eIb1 = clip(self.eIR.error/self.eIb1_lim, -self.sat_sigma, self.sat_sigma)
 
         # Single-agent's obs:
         obs = np.concatenate((self.state, self.eIx, self.eb1, self.eIb1), axis=None)
@@ -130,8 +129,9 @@ class CoupledWrapper(QuadEnv):
                (abs(x) >= 1.0).any() # [m]
             or (abs(v) >= 1.0).any() # [m/s]
             or (abs(W) >= 1.0).any() # [rad/s]
-            or (abs(self.eIx) >= 1.0).any()
-            or (abs(self.eIb1) >= 1.0)
+            # or (abs(self.eIx) >= 1.0).any()
+            or (abs(self.eb1) >= 1.0)
+            # or (abs(self.eIb1) >= 1.0)
         )
 
         return [done]

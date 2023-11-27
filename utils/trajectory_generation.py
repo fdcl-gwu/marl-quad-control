@@ -329,7 +329,7 @@ class TrajectoryGeneration:
             error_obs_n = [obs_1, obs_2]
         elif framework == "SARL":
             # Single-agent's obs:
-            eIx, eIb1 = obs_n[0][18:21], obs_n[0][21]
+            eIx, eIb1 = obs_n[0][18:21], obs_n[0][22]
             R_vec = self.R.reshape(9, 1, order='F').flatten()
             obs = np.concatenate((ex_norm, ev_norm, R_vec, eW_norm, eIx, eb1, eIb1), axis=None)
             error_obs_n = [obs]

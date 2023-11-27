@@ -165,7 +165,8 @@ class DecoupledWrapper(QuadEnv):
         done_2 = False
         done_2 = bool(
             (abs(W3) >= 1.0) # [rad/s]
-            or (abs(eIb1) >= 1.0).any()
+            or (abs(self.eb1) >= 1.0)
+            # or (abs(eIb1) >= 1.0).any()
         )
 
         return [done_1, done_2]
