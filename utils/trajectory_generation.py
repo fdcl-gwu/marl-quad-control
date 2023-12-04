@@ -299,7 +299,7 @@ class TrajectoryGeneration:
             self.vd[1] = circle_radius * circle_W * np.cos(th)
 
             # yaw-axis:
-            w_b1d = 0.5 * np.pi / 10.0
+            w_b1d = 0.1*np.pi
             th_b1d = w_b1d * t
             self.b1d = np.array([np.cos(th_b1d), np.sin(th_b1d), 0]) #TODO: np.array([1.,0.,0.])
         else:

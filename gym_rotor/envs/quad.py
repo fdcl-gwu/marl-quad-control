@@ -411,8 +411,9 @@ class QuadEnv(gym.Env):
         return self.state
 
 
-    def set_goal_pos(self, xd_vis):
+    def set_goal_pos(self, xd_vis, b1d_vis):
         self.xd_vis = xd_vis*self.x_lim
+        self.b1d_vis = b1d_vis
 
 
     def render(self, mode='human', close=False):
@@ -427,6 +428,8 @@ class QuadEnv(gym.Env):
         # Quadrotor and goal positions:
         quad_pos = x # [m]
         cmd_pos  = self.xd_vis # [m]
+        # Heading commands:
+        b1d_vis = self.b1d_vis
 
         # Axis:
         x_axis = np.array([state_vis[6], state_vis[7], state_vis[8]])
@@ -477,9 +480,12 @@ class QuadEnv(gym.Env):
                                              shaftwidth=0.05, color=color.cyan)
                                     
             # Commands.
-            self.render_ref = sphere(canvas=self.viewer, pos=vector(cmd_pos[0], cmd_pos[1], cmd_pos[2]), \
+            self.render_xd = sphere(canvas=self.viewer, pos=vector(cmd_pos[0], cmd_pos[1], cmd_pos[2]), \
                                      radius=0.07, color=color.red, \
-                                     make_trail=True, trail_type='points', interval=10)									
+                                     make_trail=True, trail_type='points', interval=10)		
+            self.render_b1d = arrow(canvas=self.viewer, pos=vector(quad_pos[0], quad_pos[1], quad_pos[2]), \
+                                     axis=vector(b1d_vis[0], b1d_vis[1], b1d_vis[2]), \
+                                     shaftwidth=0.03, color=color.orange)							
             
             # Inertial axis.				
             self.e1_axis = arrow(pos=vector(2.5, -2.5, 0), axis=0.5*vector(1, 0, 0), \
@@ -490,18 +496,15 @@ class QuadEnv(gym.Env):
                                  shaftwidth=0.04, color=color.red)
 
             # Body axis.				
-            self.render_b1_axis = arrow(canvas=self.viewer, 
-                                        pos=vector(quad_pos[0], quad_pos[1], quad_pos[2]), \
+            self.render_b1_axis = arrow(canvas=self.viewer, pos=vector(quad_pos[0], quad_pos[1], quad_pos[2]), \
                                         axis=vector(x_axis[0], x_axis[1], x_axis[2]), \
                                         shaftwidth=0.02, color=color.blue, \
                                         make_trail=True, retain=70, interval=10, \
                                         trail_type='points', trail_radius=0.02, trail_color=color.yellow)
-            self.render_b2_axis = arrow(canvas=self.viewer, 
-                                        pos=vector(quad_pos[0], quad_pos[1], quad_pos[2]), \
+            self.render_b2_axis = arrow(canvas=self.viewer, pos=vector(quad_pos[0], quad_pos[1], quad_pos[2]), \
                                         axis=vector(y_axis[0], y_axis[1], y_axis[2]), \
                                         shaftwidth=0.02, color=color.green)
-            self.render_b3_axis = arrow(canvas=self.viewer, 
-                                        pos=vector(quad_pos[0], quad_pos[1], quad_pos[2]), \
+            self.render_b3_axis = arrow(canvas=self.viewer, pos=vector(quad_pos[0], quad_pos[1], quad_pos[2]), \
                                         axis=vector(z_axis[0], z_axis[1], z_axis[2]), \
                                         shaftwidth=0.02, color=color.red)
 
@@ -614,10 +617,18 @@ class QuadEnv(gym.Env):
         self.render_force_rotor4.axis.z = force_offest * self.f4 * z_axis[2]
 
         # Update commands.
-        self.render_ref.pos.x = cmd_pos[0]
-        self.render_ref.pos.y = cmd_pos[1]
-        self.render_ref.pos.z = cmd_pos[2]
+        self.render_xd.pos.x = cmd_pos[0]
+        self.render_xd.pos.y = cmd_pos[1]
+        self.render_xd.pos.z = cmd_pos[2]
 
+        axis_offest = 0.9
+        self.render_b1d.pos.x = quad_pos[0]
+        self.render_b1d.pos.y = quad_pos[1]
+        self.render_b1d.pos.z = quad_pos[2]
+        self.render_b1d.axis.x = axis_offest * b1d_vis[0] 
+        self.render_b1d.axis.y = axis_offest * b1d_vis[1] 
+        self.render_b1d.axis.z = axis_offest * b1d_vis[2] 
+        
         # Update body axis.
         axis_offest = 0.8
         self.render_b1_axis.pos.x = quad_pos[0]

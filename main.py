@@ -69,13 +69,13 @@ class Learner:
         if args.test_model == True:
             agent_id = 0
             if self.framework in ("DTDE", "CTDE"):
-                self.agent_n[agent_id].load(self.framework, 2640_000, agent_id, self.seed) 
+                self.agent_n[agent_id].load(self.framework, 3130_000, agent_id, self.seed) 
                 # self.agent_n[agent_id].load_solved_model(self.framework, 1680_000, agent_id, self.seed) 
                 agent_id = 1
-                # self.agent_n[agent_id].load(self.framework, 1450_000, agent_id, self.seed) 
-                self.agent_n[agent_id].load_solved_model(self.framework, 3260_000, agent_id, self.seed) 
+                self.agent_n[agent_id].load(self.framework, 1450_000, agent_id, self.seed) 
+                # self.agent_n[agent_id].load_solved_model(self.framework, 3260_000, agent_id, self.seed) 
             elif self.framework == "SARL":
-                self.agent_n[agent_id].load(self.framework, 1870_000, agent_id, self.seed) 
+                self.agent_n[agent_id].load(self.framework, 2150_000, agent_id, self.seed) 
                 # self.agent_n[agent_id].load_solved_model(self.framework, 1720_000, agent_id, self.seed) 
 
     def train_policy(self):
@@ -235,7 +235,7 @@ class Learner:
                 # Generate trajectory:
                 state = eval_env.get_current_state()
                 xd, vd, b1d, b3d, Wd = self.trajectory.get_desired(state, mode)
-                eval_env.set_goal_pos(xd)
+                eval_env.set_goal_pos(xd, b1d)
                 error_obs_n, error_state = self.trajectory.get_error_state(obs_n, self.framework)
 
                 # Actions w/o exploration noise:
