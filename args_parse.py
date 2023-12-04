@@ -13,7 +13,7 @@ def create_parser():
     parser.add_argument('--framework_id', default="CTDE", help='Name of framework: SARL, DTDE, or CTDE ')
     parser.add_argument('--max_steps', default=5000, type=int, help='Maximum number of steps in each episode (default: 2000)')
     parser.add_argument('--max_timesteps', default=int(5e6), type=int, help='Number of total timesteps (default: 7e6)')
-    parser.add_argument("--num_eval", type=float, default=5, help="Number of episodes to evaluate our trained model")
+    parser.add_argument("--num_eval", type=float, default=2, help="Number of episodes to evaluate our trained model")
     parser.add_argument("--eval_freq", default=1e4, type=int, help='How often (time steps) evaluate our trained model (default: 1e4)')       
     parser.add_argument('--eval_max_steps', default=25, type=int, help='[sec] Maximum number of steps in each episode for evaluation (default: 5)')
     # Coefficients in reward function:
@@ -25,7 +25,7 @@ def create_parser():
     parser.add_argument('--Cw12', default=0.25, type=float, metavar='G', help='Angular velocity coeff. (default: )')
     parser.add_argument('--alpha', default=0.1, type=float, metavar='G', help='Position integral coeff. (default: )')
     # Agent2's reward:
-    parser.add_argument('--Cb1', default=2.0, type=float, metavar='G', help='Attitude coeff. (default: )')
+    parser.add_argument('--Cb1', default=4.0, type=float, metavar='G', help='Attitude coeff. (default: )')
     parser.add_argument('--CW3', default=0.2, type=float, metavar='G', help='Angular velocity coeff. (default: )')
     parser.add_argument('--CIb1', default=0.1, type=float, metavar='G', help='Attitude integral coeff. (default: )')
     # Domain randomization: 

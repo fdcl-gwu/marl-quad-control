@@ -178,7 +178,7 @@ class TrajectoryGeneration:
             self.x_offset = np.zeros(3)
             self.yaw_offset = 0.
 
-            print('Switched to manual mode')
+            # print('Switched to manual mode')
         
         self.xd = self.x_init + self.x_offset
         self.vd = np.zeros(3) # (self.xd - self.x) / 1.0

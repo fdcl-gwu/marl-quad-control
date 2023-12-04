@@ -69,10 +69,10 @@ class Learner:
         if args.test_model == True:
             agent_id = 0
             if self.framework in ("DTDE", "CTDE"):
-                self.agent_n[agent_id].load(self.framework, 3130_000, agent_id, self.seed) 
+                self.agent_n[agent_id].load(self.framework, 2790_000, agent_id, self.seed) 
                 # self.agent_n[agent_id].load_solved_model(self.framework, 1680_000, agent_id, self.seed) 
                 agent_id = 1
-                self.agent_n[agent_id].load(self.framework, 1450_000, agent_id, self.seed) 
+                self.agent_n[agent_id].load(self.framework, 2360_000, agent_id, self.seed) 
                 # self.agent_n[agent_id].load_solved_model(self.framework, 3260_000, agent_id, self.seed) 
             elif self.framework == "SARL":
                 self.agent_n[agent_id].load(self.framework, 2150_000, agent_id, self.seed) 
