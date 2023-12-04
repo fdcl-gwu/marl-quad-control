@@ -45,8 +45,8 @@ class DecoupledWrapper(QuadEnv):
         b1 = R @ np.array([1.,0.,0.])
         b3 = R @ np.array([0.,0.,1.])
         b1c = -(hat(b3) @ hat(b3)) @ self.b1d # desired b1 
-        self.eb1 = ang_btw_two_vectors(b1, b1c)/np.pi # b1 error, [0,pi) ->[0,1]
-        self.eb3 = ang_btw_two_vectors(b3, self.b3d)/np.pi # [0,pi) ->[0,1]
+        self.eb1 = norm_ang_btw_two_vectors(b1c, b1) # b1 error, [-1, 1)
+        self.eb3 = norm_ang_btw_two_vectors(self.b3d, b3) # b3 error, [-1, 1)
 
         # Reset integral terms:
         self.eIx  = np.zeros(3)
@@ -105,8 +105,8 @@ class DecoupledWrapper(QuadEnv):
 
         b1, _, _, _ = decoupled_obs2_decomposition(self.state, self.eb1, self.eIb1) # Agent2's obs
         b1c = -(hat(b3) @ hat(b3)) @ self.b1d # desired b1 
-        self.eb1 = ang_btw_two_vectors(b1, b1c)/np.pi # b1 error, [0,pi) ->[0,1]
-        self.eb3 = ang_btw_two_vectors(b3, self.b3d)/np.pi # [0,pi) ->[0,1]
+        self.eb1 = norm_ang_btw_two_vectors(b1c, b1) # b1 error, [-1, 1)
+        self.eb3 = norm_ang_btw_two_vectors(self.b3d, b3) # b3 error, [-1, 1)
         self.eIR.integrate(self.eb1*np.pi, self.dt) # b1 integral error
         self.eIb1 = clip(self.eIR.error/self.eIb1_lim, -self.sat_sigma, self.sat_sigma)
 

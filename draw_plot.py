@@ -336,7 +336,7 @@ for i in range(t.size):
     b3 = R @ np.array([0.,0.,1.])
     b1d = cmd[i, 6:9]
     b1c = -(hat(b3) @ hat(b3)) @ b1d # desired b1 
-    eb1[i] = ang_btw_two_vectors(b1, b1c) # b1 error, [rad]
+    eb1[i] = norm_ang_btw_two_vectors(b1c, b1) # b1 error
     eR[i] = 0.5*vee(Rd.T@R - Rd.T@R.T) # attitude error vector
 
 # Position and Yaw errors:

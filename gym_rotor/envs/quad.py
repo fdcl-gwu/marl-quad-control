@@ -69,7 +69,7 @@ class QuadEnv(gym.Env):
         # Coefficients in reward function:
         self.framework_id = args.framework_id
         self.reward_alive = 0.  # ≥ 0 is a bonus value earned by the agent for staying alive
-        self.reward_crash = -1. # Out of boundry or crashed!
+        self.reward_crash = -1. # Out of boundary or crashed!
         self.Cx  = args.Cx
         self.CIx = args.CIx
         self.Cv  = args.Cv
@@ -157,10 +157,10 @@ class QuadEnv(gym.Env):
 
         # Terminal condition:
         done = self.done_wrapper(obs)
-        if done[0]: # Out of boundry or crashed!
+        if done[0]: # Out of boundary or crashed!
             reward[0] = self.reward_crash
         if self.framework_id in ("DTDE", "CTDE"):
-            if done[1]: # Out of boundry or crashed!
+            if done[1]: # Out of boundary or crashed!
                 reward[1] = self.reward_crash
 
         return obs, reward, done, False, {}
@@ -285,7 +285,7 @@ class QuadEnv(gym.Env):
         eX = x - self.xd # position error
         eV = v - self.vd # velocity error
         # Heading errors:
-        eb1 = ang_btw_two_vectors(get_current_b1(R), self.b1d) # [rad]
+        eb1 = norm_ang_btw_two_vectors(self.b1d, get_current_b1(R)) # [-1, 1)
         # Attitude errors:
         '''
         RdT_R = self.Rd.T @ R

@@ -317,7 +317,7 @@ class TrajectoryGeneration:
         b2 = self.R @ np.array([0.,1.,0.])
         b3 = self.R @ np.array([0.,0.,1.])
         b1c = -(hat(b3) @ hat(b3)) @ self.b1d # desired b1 
-        eb1 = ang_btw_two_vectors(b1, b1c)/np.pi # b1 error, [0,pi) ->[0,1]
+        eb1 = norm_ang_btw_two_vectors(b1c, b1) # b1 error, [-1, 1)
         if framework in ("DTDE", "CTDE"):
             # Agent1's obs:
             eIx = obs_n[0][12:15]

@@ -143,12 +143,38 @@ def ensure_SO3(R, tolerance=1e-6):
     
 
 def ang_btw_two_vectors(vec1, vec2):
+    # Compute the dot product:
     unit_vector_1 = vec1 / norm(vec1)
     unit_vector_2 = vec2 / norm(vec2)
     dot_product = clip(dot(unit_vector_1, unit_vector_2), -1., 1.)
+
+    # Compute the angle using arccosine:
     angle = acos(dot_product)
     angle = 0. if angle < 1e-6 else angle
     return angle
+
+
+def norm_ang_btw_two_vectors(desired_vec, current_vec):
+    # Compute the dot product:
+    desired_unit_vec = desired_vec / norm(desired_vec)
+    current_unit_vec = current_vec / norm(current_vec)
+    dot_product = clip(dot(desired_unit_vec, current_unit_vec), -1., 1.)
+
+    # Compute the angle using arccosine:
+    angle_radians = acos(dot_product) # [0, pi)
+
+    # Determine the direction of rotation:
+    cross_product = np.cross(desired_unit_vec, current_unit_vec)
+    z_component_sign = np.sign(cross_product[2])
+
+    # The angle to the range [-pi, pi):
+    if z_component_sign < 0:
+        angle_radians = -angle_radians
+
+    # Normalize to the range [-1, 1):
+    norm_angle = angle_radians/np.pi
+
+    return norm_angle
     
 
 def eulerAnglesToRotationMatrix(theta) :

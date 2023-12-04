@@ -69,14 +69,14 @@ class Learner:
         if args.test_model == True:
             agent_id = 0
             if self.framework in ("DTDE", "CTDE"):
-                # self.agent_n[agent_id].load(self.framework, 4200_000, agent_id, self.seed) 
-                self.agent_n[agent_id].load_solved_model(self.framework, 3670_000, agent_id, self.seed) 
+                self.agent_n[agent_id].load(self.framework, 2640_000, agent_id, self.seed) 
+                # self.agent_n[agent_id].load_solved_model(self.framework, 1680_000, agent_id, self.seed) 
                 agent_id = 1
-                # self.agent_n[agent_id].load(self.framework, 1980_000, agent_id, self.seed) 
-                self.agent_n[agent_id].load_solved_model(self.framework, 3700_000, agent_id, self.seed) 
+                # self.agent_n[agent_id].load(self.framework, 1450_000, agent_id, self.seed) 
+                self.agent_n[agent_id].load_solved_model(self.framework, 3260_000, agent_id, self.seed) 
             elif self.framework == "SARL":
-                # self.agent_n[agent_id].load(self.framework, 2910_000, agent_id, self.seed) 
-                self.agent_n[agent_id].load_solved_model(self.framework, 1720_000, agent_id, self.seed) 
+                self.agent_n[agent_id].load(self.framework, 1870_000, agent_id, self.seed) 
+                # self.agent_n[agent_id].load_solved_model(self.framework, 1720_000, agent_id, self.seed) 
 
     def train_policy(self):
         # Evaluate policy:
@@ -113,9 +113,9 @@ class Learner:
             obs_next_n, r_n, done_n, _, _ = self.env.step(copy.deepcopy(action))
             eX = np.round(obs_next_n[0][0:3]*self.env.x_lim, 5) # position error [m]
             if self.framework in ("DTDE", "CTDE"):
-                eb1 = ang_btw_two_vectors(obs_next_n[1][0:3], b1d) # heading error [rad]
+                eb1 = ang_btw_two_vectors(b1d, obs_next_n[1][0:3]) # heading error [rad]
             elif self.framework == "SARL":
-                eb1 = ang_btw_two_vectors(obs_next_n[0][6:9], b1d) # heading error [rad]
+                eb1 = ang_btw_two_vectors(b1d, obs_next_n[0][6:9]) # heading error [rad]
 
             # Episode termination:
             if episode_timesteps == self.args.max_steps: # Episode terminated!
@@ -266,11 +266,11 @@ class Learner:
                 if any(done_n) or episode_timesteps == self.eval_max_steps:
                     eX = np.round(error_obs_n[0][0:3]*self.env.x_lim, 5) # position error [m]
                     if self.framework in ("DTDE", "CTDE"):
-                        eb1 = ang_btw_two_vectors(obs_next_n[1][0:3], b1d) # heading error [rad]
+                        eb1 = ang_btw_two_vectors(b1d, obs_next_n[1][0:3]) # heading error [rad]
                         success[0] = True if (abs(eX) <= 0.05).all() else False
                         success[1] = True if abs(eb1) <= 0.01 else False
                     elif self.framework == "SARL":
-                        eb1 = ang_btw_two_vectors(obs_next_n[0][6:9], b1d) # heading error [rad]
+                        eb1 = ang_btw_two_vectors(b1d, obs_next_n[0][6:9]) # heading error [rad]
                         success[0] = True if (abs(eX) <= 0.05).all() else False
                     print(f"eval_iter: {num_eval+1}, time_stpes: {episode_timesteps}, episode_reward: {episode_reward}, episode_benchmark_reward: {episode_benchmark_reward:.3f}, eX: {eX}, eb1: {eb1:.3f}")
                     success_count.append(success)
