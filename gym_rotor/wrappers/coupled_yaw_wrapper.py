@@ -109,9 +109,9 @@ class CoupledWrapper(QuadEnv):
         reward_eX   = -self.Cx*(norm(self.ex, 2)**2) 
         reward_eIX  = -self.CIx*(norm(self.eIx, 2)**2)
         reward_eV   = -self.Cv*(norm(self.ev, 2)**2)
-        reward_eb1  = -self.Cb1*(self.eb1)
+        reward_eb1  = -self.Cb1*abs(self.eb1)
         reward_eIb1 = -self.CIb1*abs(self.eIb1)
-        reward_eb3  = -self.Cb3*(self.eb3) 
+        reward_eb3  = -self.Cb3*abs(self.eb3)
         reward_eW   = -self.CW*(norm(W, 2)**2)
         
         rwd = reward_eX + reward_eIX + reward_eV + reward_eb1 + reward_eIb1 + reward_eb3 + reward_eW

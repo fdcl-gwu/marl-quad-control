@@ -296,7 +296,7 @@ class QuadEnv(gym.Env):
 
         # Reward function:
         reward_eX = -Cx*(norm(eX, 2)**2) 
-        reward_eb1  = -Cb1*(eb1/pi) # [0., pi] -> [0., 1.0]
+        reward_eb1  = -Cb1*(abs(eb1)) # [0., pi] -> [0., 1.0]
         reward_eV = -Cv*(norm(eV, 2)**2)
         reward_eW = -CW*(norm(W, 2)**2)
 

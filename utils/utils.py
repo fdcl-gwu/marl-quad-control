@@ -13,7 +13,7 @@ def benchmark_reward_func(error_state, reward_min, args):
     reward_eX   = -args.Cx*(norm(ex_norm, 2)**2) 
     reward_eIX  = -args.CIx*(norm(eIx, 2)**2)
     reward_eV   = -args.Cv*(norm(ev_norm, 2)**2)
-    reward_eb1  = -args.Cb1*(eb1)
+    reward_eb1  = -args.Cb1*abs(eb1)
     reward_eIb1 = -args.CIb1*abs(eIb1**2)
     reward_eW   = -args.Cw12*(norm(eW_norm, 2)**2)
 

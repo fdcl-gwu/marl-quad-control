@@ -126,7 +126,7 @@ class DecoupledWrapper(QuadEnv):
         reward_eX   = -self.Cx*(norm(self.ex, 2)**2) 
         reward_eIX  = -self.CIx*(norm(eIx, 2)**2)
         reward_eV   = -self.Cv*(norm(self.ev, 2)**2)
-        reward_eb3  = -self.Cb3*(self.eb3) 
+        reward_eb3  = -self.Cb3*abs(self.eb3)
         reward_ew12 = -self.Cw12*(norm(w12, 2)**2)
         rwd_1 = reward_eX + reward_eIX+ reward_eV + reward_eb3 + reward_ew12
 
@@ -134,7 +134,7 @@ class DecoupledWrapper(QuadEnv):
         _, W3, eb1, eIb1 = decoupled_obs2_decomposition(self.state, self.eb1, self.eIb1)
 
         # Agent2's reward:
-        reward_eb1  = -self.Cb1*(eb1)
+        reward_eb1  = -self.Cb1*abs(eb1)
         reward_eIb1 = -self.CIb1*abs(eIb1)
         reward_eW3  = -self.CW3*(abs(W3)**2)
         rwd_2 = reward_eb1 + reward_eIb1 + reward_eW3 

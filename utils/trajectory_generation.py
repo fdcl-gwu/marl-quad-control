@@ -65,7 +65,7 @@ class TrajectoryGeneration:
         # Circle:
         self.num_circles = 2
         self.circle_linear_v = 0.4
-        self.circle_W = 0.8
+        self.circle_W = 0.4
         self.circle_radius = 0.7
 
 
@@ -272,7 +272,7 @@ class TrajectoryGeneration:
             self.trajectory_started = True
 
             self.circle_center = np.copy(self.x)
-            self.circle_W = 2 * np.pi / 8
+            #self.circle_W = 2 * np.pi / 8
 
             self.t_traj = self.circle_radius / self.circle_linear_v \
                         + self.num_circles * 2 * np.pi / self.circle_W
