@@ -53,7 +53,7 @@ def create_parser():
     # Regularizing action policies for smooth control:
     parser.add_argument('--lam_T', default=0.6, type=int, metavar='N', help='Temporal Smoothness (default: 0.5~0.8)')
     parser.add_argument('--lam_S', default=0.3, type=int, metavar='N', help='Spatial Smoothness (default: 0.3~0.5)')
-    parser.add_argument('--lam_M', default=0.5, type=int, metavar='N', help='Magnitude Smoothness (default: 0.2~0.5)')
+    parser.add_argument('--lam_M', default=0.4, type=int, metavar='N', help='Magnitude Smoothness (default: 0.2~0.5)')
 
     # args of replay buffer:
     parser.add_argument('--batch_size', default=256, type=int, metavar='N', help='Batch size of actor and critic networks (default: 256)')

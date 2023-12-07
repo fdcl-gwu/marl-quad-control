@@ -301,7 +301,7 @@ class TrajectoryGeneration:
             # yaw-axis:
             w_b1d = 0.1*np.pi
             th_b1d = w_b1d * t
-            self.b1d = np.array([np.cos(th_b1d), np.sin(th_b1d), 0]) #TODO: np.array([1.,0.,0.])
+            self.b1d = np.array([1.,0.,0.]) # np.array([np.cos(th_b1d), np.sin(th_b1d), 0]) #TODO: 
         else:
             self.mark_traj_end(True)
             

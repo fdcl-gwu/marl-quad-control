@@ -69,10 +69,10 @@ class Learner:
         if args.test_model == True:
             agent_id = 0
             if self.framework in ("DTDE", "CTDE"):
-                self.agent_n[agent_id].load(self.framework, 2790_000, agent_id, self.seed) 
-                # self.agent_n[agent_id].load_solved_model(self.framework, 1680_000, agent_id, self.seed) 
+                # self.agent_n[agent_id].load(self.framework, 2790_000, agent_id, self.seed) 
+                self.agent_n[agent_id].load_solved_model(self.framework, 3670_000, agent_id, self.seed) # 3670_000
                 agent_id = 1
-                self.agent_n[agent_id].load(self.framework, 2360_000, agent_id, self.seed) 
+                self.agent_n[agent_id].load(self.framework, 1510_000, agent_id, self.seed) 
                 # self.agent_n[agent_id].load_solved_model(self.framework, 3260_000, agent_id, self.seed) 
             elif self.framework == "SARL":
                 self.agent_n[agent_id].load(self.framework, 2150_000, agent_id, self.seed) 
@@ -255,11 +255,11 @@ class Learner:
                 # Save data:
                 if args.save_log:
                     if self.framework in ("DTDE", "CTDE"):
-                        eIx = obs_next_n[0][12:] 
+                        eIx, eIb1 = obs_next_n[0][12:], obs_next_n[1][5] 
                     elif self.framework == "SARL":
-                        eIx = obs_next_n[0][15:18] 
+                        eIx, eIb1 = obs_next_n[0][15:18], obs_next_n[0][-4]
                     act_list.append(action)
-                    obs_list.append(np.concatenate((state_next, eIx), axis=None))
+                    obs_list.append(np.concatenate((state_next, eIx, eIb1), axis=None))
                     cmd_list.append(np.concatenate((xd, vd, b1d, b3d, Wd), axis=None))
 
                 # Episode termination:

@@ -17,7 +17,7 @@ plt.rcParams['font.size'] = 18
 fontsize = 25
 
 # Data load and indexing:
-file_name = 'log_11212023_121005'
+file_name = 'CTDE_log_12072023_134527'
 log_date = np.loadtxt(os.path.join('./results', file_name + '.dat')) 
 start_index = 3
 end_index = len(log_date)
@@ -29,13 +29,13 @@ args = parser.parse_args()
 if args.framework_id in ("DTDE", "CTDE"):
     env = DecoupledWrapper()
     load_act  = log_date[:, 0:5] # automatically discards the headers
-    load_obs  = log_date[:, 5:26] 
-    load_cmd  = log_date[:, 26:] 
+    load_obs  = log_date[:, 5:27] 
+    load_cmd  = log_date[:, 27:] 
 elif args.framework_id == "SARL":
     env = CoupledWrapper()
     load_act  = log_date[:, 0:4] # automatically discards the headers
-    load_obs  = log_date[:, 4:25] 
-    load_cmd  = log_date[:, 25:] 
+    load_obs  = log_date[:, 4:26] 
+    load_cmd  = log_date[:, 26:] 
 act = load_act[start_index-2: end_index-2]
 obs = load_obs[start_index-2: end_index-2]
 cmd = load_cmd[start_index-2: end_index-2]
@@ -59,18 +59,16 @@ if args.framework_id in ("DTDE", "CTDE"):
     tau = act[:, 1:4]
     b1, b2 = obs[:, 6:9], obs[:, 9:12]
     fM[0] = f_total
-    fM[1] = np.einsum('ij,ij->i', b1, tau) + env.J[2,2]*W3*W2 # M2
-    fM[2] = np.einsum('ij,ij->i', b2, tau) - env.J[2,2]*W3*W1 # M3
-    fM[3] = act[:, 4]
+    fM[1] = np.einsum('ij,ij->i', b1, tau) + env.J[2,2]*W3*W2 # M1
+    fM[2] = np.einsum('ij,ij->i', b2, tau) - env.J[2,2]*W3*W1 # M2
+    fM[3] = act[:, 4] # M3
     
     # FM matrix to thrust of each motor:
     forces = (env.fM_to_forces @ fM).clip(env.min_force, env.max_force)
     f1, f2, f3, f4 = forces[0], forces[1], forces[2], forces[3]
 elif args.framework_id == "SARL":
     fM[0] = f_total
-    fM[1] = act[:, 1] # M2
-    fM[2] = act[:, 2] # M3
-    fM[3] = act[:, 3]
+    fM[1], fM[2], fM[3] = act[:, 1], act[:, 2], act[:, 3] 
 	
     # FM matrix to thrust of each motor:
     forces = (env.fM_to_forces @ fM).clip(env.min_force, env.max_force)
@@ -114,7 +112,7 @@ for label in (axs[2].get_xticklabels() + axs[2].get_yticklabels()):
 for label in (axs[3].get_xticklabels() + axs[3].get_yticklabels()):
 	label.set_fontsize(fontsize)
 if is_SAVE:
-    plt.savefig(os.path.join('./results', file_name[4:]+'_fM'+'.png'), bbox_inches='tight')
+    plt.savefig(os.path.join('./results', file_name[:4]+file_name[8:]+'_fM'+'.png'), bbox_inches='tight')
 
 #######################################################################
 ############################# Plot Forces #############################
@@ -147,7 +145,7 @@ for label in (axs[2].get_xticklabels() + axs[2].get_yticklabels()):
 for label in (axs[3].get_xticklabels() + axs[3].get_yticklabels()):
 	label.set_fontsize(fontsize)
 if is_SAVE:
-    plt.savefig(os.path.join('./results', file_name[4:]+'_T'+'.png'), bbox_inches='tight')
+    plt.savefig(os.path.join('./results', file_name[:4]+file_name[8:]+'_T'+'.png'), bbox_inches='tight')
 
 ###################################################################################
 ############################# Plot States x, v, and W #############################
@@ -227,7 +225,7 @@ for label in (axs[2, 1].get_xticklabels() + axs[2, 1].get_yticklabels()):
 for label in (axs[2, 2].get_xticklabels() + axs[2, 2].get_yticklabels()):
 	label.set_fontsize(fontsize)
 if is_SAVE:
-    plt.savefig(os.path.join('./results', file_name[4:]+'_x_v_W'+'.png'), bbox_inches='tight')
+    plt.savefig(os.path.join('./results', file_name[:4]+file_name[8:]+'_x_v_W'+'.png'), bbox_inches='tight')
 
 #########################################################################
 ############################# Plot States R #############################
@@ -315,7 +313,7 @@ for label in (axs[2, 2].get_xticklabels() + axs[2, 2].get_yticklabels()):
 	label.set_fontsize(fontsize)
 
 if is_SAVE:
-    plt.savefig(os.path.join('./results', file_name[4:]+'_R'+'.png'), bbox_inches='tight')
+    plt.savefig(os.path.join('./results', file_name[:4]+file_name[8:]+'_R'+'.png'), bbox_inches='tight')
 
 ##########################################################################
 ######################### Plot eX, eIX and eR ############################
@@ -341,10 +339,11 @@ for i in range(t.size):
 
 # Position and Yaw errors:
 eX1, eX2, eX3 = x1 - xd1, x2 - xd2, x3 - xd3
-print('=============================================')
-print(f"avg_eX1 [m]: {sum(abs(eX1))/eX1.size:.2f}, avg_eX2 [m]: {sum(abs(eX2))/eX2.size:.2f}")
-print(f"avg_eX3 [m]: {sum(abs(eX3))/eX3.size:.2f}, avg_yaw [rad]: {sum(abs(eb1))/eb1.size:.2f}")
-print('=============================================')
+print('========================================================================')
+print(f"avg_eX1 [m]: {sum(abs(eX1))/eX1.size:.2f}, avg_eX2 [m]: {sum(abs(eX2))/eX2.size:.2f}, avg_eX3 [m]: {sum(abs(eX3))/eX3.size:.2f}")
+print(f"avg_eX1 [cm]: {sum(abs(eX1))*100/eX1.size:.2f}, avg_eX2 [cm]: {sum(abs(eX2))*100/eX2.size:.2f}, avg_eX3 [cm]: {sum(abs(eX3))*100/eX3.size:.2f}")
+print(f"avg_yaw [rad]: {sum(abs(eb1))/eb1.size:.2f}, avg_yaw [deg]: {sum(abs(eb1)*180/np.pi)/eb1.size:.2f}")
+print('========================================================================')
 
 fig, axs = plt.subplots(3, 3, figsize=(30, 12))
 axs[0, 0].plot(t, eX1, linewidth=3, label='$e_{x_1}$')
@@ -357,15 +356,12 @@ axs[0, 2].plot(t, eX3, linewidth=3, label='$e_{x_3}$')
 axs[0, 2].set_ylabel('$e_{x_3}$ [m]', size=fontsize)
 
 axs[1, 0].plot(t, eIx1, linewidth=3, label='$eI_{x_1}$')
-#axs[1, 0].plot(t, eIX_vec[:, 0], linewidth=3, label='$eI_{x_1}$')
 axs[1, 0].set_ylabel('$eI_{x_1}$', size=fontsize)
 
 axs[1, 1].plot(t, eIx2, linewidth=3, label='$eI_{x_2}$')
-#axs[1, 1].plot(t, eIX_vec[:, 1], linewidth=3, label='$eI_{x_2}$')
 axs[1, 1].set_ylabel('$eI_{x_2}$', size=fontsize)
 
 axs[1, 2].plot(t, eIx3, linewidth=3, label='$eI_{x_3}$')
-#axs[1, 2].plot(t, eIX_vec[:, 2], linewidth=3, label='$eI_{x_3}$')
 axs[1, 2].set_ylabel('$eI_{x_3}$', size=fontsize)
 
 axs[2, 0].plot(t, eR[:, 0], linewidth=3, label='$e_{R_1}$')
@@ -402,6 +398,6 @@ for label in (axs[2, 1].get_xticklabels() + axs[2, 1].get_yticklabels()):
 for label in (axs[2, 2].get_xticklabels() + axs[2, 2].get_yticklabels()):
 	label.set_fontsize(fontsize)
 if is_SAVE:
-    plt.savefig(os.path.join('./results', file_name[4:]+'_eX_eIX_eR'+'.png'), bbox_inches='tight')
+    plt.savefig(os.path.join('./results', file_name[:4]+file_name[8:]+'_eX_eIX_eR'+'.png'), bbox_inches='tight')
 else:
     plt.show()
