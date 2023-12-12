@@ -31,19 +31,23 @@ class TrajectoryGeneration:
 
         self.x_lim, self.v_lim, self.W_lim = env.x_lim, env.v_lim, env.W_lim
 
-        self.xd_norm, self.vd_norm, self.Wd_norm = np.zeros(3), np.zeros(3), np.zeros(3)
-        self.xd, self.vd, self.Wd = np.zeros(3), np.zeros(3), np.zeros(3)
-        self.b1d = np.array([1.,0.,0.]) # desired heading direction
-        self.b3d = np.array([0.,0.,1.])
+        self.x_init, self.v_init = np.zeros(3), np.zeros(3)
+        self.R_init, self.W_init = np.identity(3), np.zeros(3)
+        self.b1_init = np.zeros(3)
+        self.theta_init = 0.0
 
         self.x_norm, self.v_norm, self.W_norm = np.zeros(3), np.zeros(3), np.zeros(3)
         self.x, self.v, self.W = np.zeros(3), np.zeros(3), np.zeros(3)
         self.R = np.identity(3)
 
-        self.x_init, self.v_init = np.zeros(3), np.zeros(3)
-        self.R_init, self.W_init = np.identity(3), np.zeros(3)
-        self.b1_init = np.zeros(3)
-        self.theta_init = 0.0
+        self.xd, self.vd, self.Wd = np.zeros(3), np.zeros(3), np.zeros(3)
+        self.xd_norm, self.vd_norm, self.Wd_norm = np.zeros(3), np.zeros(3), np.zeros(3)
+        self.b1d = np.array([1.,0.,0.]) # desired heading direction
+        self.b3d = np.array([0.,0.,1.])
+
+        # Geometric tracking controller:
+        self.xd_2dot, self.xd_3dot, self.xd_4dot = np.zeros(3), np.zeros(3), np.zeros(3)
+        self.b1d_dot, self.b1d_2dot = np.zeros(3), np.zeros(3)
 
         self.trajectory_started  = False
         self.trajectory_complete = False
@@ -90,6 +94,11 @@ class TrajectoryGeneration:
 
         return self.xd_norm, self.vd_norm, self.b1d, self.b3d, self.Wd_norm
 
+
+    def get_desired_geometric_controller(self):
+
+        return self.xd, self.vd, self.xd_2dot, self.xd_3dot, self.xd_4dot, \
+               self.b1d, self.b1d_dot, self.b1d_2dot
     
     def calculate_desired(self):
         if self.manual_mode:
@@ -207,7 +216,7 @@ class TrajectoryGeneration:
 
         if self.t < self.t_traj:
             self.xd[2] = self.x_init[2] + self.takeoff_velocity * self.t 
-            #self.xd_2dot[2] = self.takeoff_velocity
+            self.xd_2dot[2] = self.takeoff_velocity
         else:
             if self.waypoint_reached(self.xd, self.x, 0.04):
                 self.xd[2] = self.takeoff_end_height
@@ -242,7 +251,7 @@ class TrajectoryGeneration:
 
         if self.t < self.t_traj:
             self.xd[2] = self.x_init[2] + self.landing_velocity * self.t
-            #self.xd_2dot[2] = self.landing_velocity
+            self.xd_2dot[2] = self.landing_velocity
         else:
             if self.x[2] > self.landing_motor_cutoff_height:
                 self.xd[2] = self.landing_motor_cutoff_height
@@ -290,18 +299,37 @@ class TrajectoryGeneration:
             t = self.t - circle_radius / self.circle_linear_v
             th = circle_W * t
 
+            circle_W2 = circle_W * circle_W
+            circle_W3 = circle_W2 * circle_W
+            circle_W4 = circle_W3 * circle_W
+
             # x-axis:
             self.xd[0] = circle_radius * np.cos(th) + self.circle_center[0]
-            self.vd[0] = - circle_radius * circle_W * np.sin(th)
+            self.vd[0] = -circle_radius * circle_W * np.sin(th)
+            self.xd_2dot[0] = -circle_radius * circle_W2 * np.cos(th)
+            self.xd_3dot[0] =  circle_radius * circle_W3 * np.sin(th)
+            self.xd_4dot[0] =  circle_radius * circle_W4 * np.cos(th)
 
             # y-axis:
             self.xd[1] = circle_radius * np.sin(th) + self.circle_center[1]
             self.vd[1] = circle_radius * circle_W * np.cos(th)
+            self.xd_2dot[1] = -circle_radius * circle_W2 * np.sin(th)
+            self.xd_3dot[1] = -circle_radius * circle_W3 * np.cos(th)
+            self.xd_4dot[1] =  circle_radius * circle_W4 * np.sin(th)
 
             # yaw-axis:
             w_b1d = 0.1*np.pi
             th_b1d = w_b1d * t
-            self.b1d = np.array([1.,0.,0.]) # np.array([np.cos(th_b1d), np.sin(th_b1d), 0]) #TODO: 
+            '''
+            self.b1d = np.array([np.cos(th_b1d), np.sin(th_b1d), 0])
+            self.b1d_dot = np.array([- w_b1d * np.sin(th_b1d), \
+                w_b1d * np.cos(th_b1d), 0.0])
+            self.b1d_2dot = np.array([- w_b1d * w_b1d * np.cos(th_b1d),
+                w_b1d * w_b1d * np.sin(th_b1d), 0.0])
+            '''
+            self.b1d = np.array([1.,0.,0.]) 
+            self.b1d_dot, self.b1d_2dot = np.zeros(3), np.zeros(3)
+            
         else:
             self.mark_traj_end(True)
             
